@@ -48,9 +48,13 @@ public class PanelLauncher {
     
 
     public static void main(String[] args) {
-        // Example usage: create a custom panel
-        PanelLauncher.showPanel(new QuanLyGiaoVien_View(), "My Panel");
-        
-    }
+    // Ví dụ: khởi chạy form Quản Lý Giáo Viên
+    javax.swing.SwingUtilities.invokeLater(() -> {
+        // Tạo instance của panel bạn muốn hiển thị
+        QuanLyHocSinh_View panel = new QuanLyHocSinh_View();
+        // Hiển thị với tiêu đề
+        showPanel(panel, "Quản Lý Học Sinh");
+    });
+}
     
 }
