@@ -34,6 +34,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 /**
  *
@@ -45,13 +47,11 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
     private GiaoVienController controller;
     private JTable table;
     private DefaultTableModel tableModel;
-    private final String PLACEHOLDER = "Tìm kiếm giáo viên ...";
-    private final Color PLACEHOLDER_COLOR = new Color(150, 150, 150);
     private final Color TEXT_COLOR = Color.BLACK;
     private List<GiaoVien> danhSachCache;
     private String selectedImageBase64 = null;
     private boolean isEditing = false;
-    private GiaoVienDAO dao = new GiaoVienDAO(null);
+    private GiaoVienDAO dao = new GiaoVienDAO();
     
     public QuanLyGiaoVien_View() {
         setupTheme();
@@ -64,7 +64,6 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
         };
         tableModel = new DefaultTableModel(columnNames, 0);
         jTable1.setModel(tableModel);
-        jTextField19.putClientProperty("JTextField.placeholderText", "Tìm kiếm giáo viên ....");
         loadTableData();
         jButton9.setVisible(false);
         VaiTroDAO vaiTroDAO = new VaiTroDAO();
@@ -75,6 +74,7 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
         jComboBox2.addItem(vt.getMaVaiTro()); // ComboBox sẽ hiển thị Ten_vai_tro do toString() override
     }
         khoaTable(jTable1);
+        jTextField19.putClientProperty("JTextField.placeholderText", "Tìm kiếm giáo viên ....");
     }
       private void khoaTable(JTable table) {
     // Khóa chỉnh sửa cell
@@ -93,7 +93,7 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
     table.getTableHeader().setResizingAllowed(false);
 }
       private String maHoaMatKhau(String password) {
-    return Base64.getEncoder().encodeToString(password.getBytes());
+    return password;
 }
 
 // Hàm lấy tên cột từ DefaultTableModel
@@ -198,23 +198,33 @@ private void loadComboBoxMonHoc() {
     return true;
 }
     private void timKiemGiaoVien() {
-    String keyword = jTextField19.getText().trim();
-    List<GiaoVien> ketQua = controller.timKiemGiaoVien(keyword);
+    String keyword = jTextField19.getText().trim().toLowerCase();
+
     tableModel.setRowCount(0);
-    
-    for (GiaoVien gv : ketQua) {
-        tableModel.addRow(new Object[]{
-            gv.getMaNguoiDung(),
-            gv.getTenNguoiDung(),
-            gv.getEmail(),
-            gv.getNgaySinh(),
-            gv.isGioiTinh() ? "Nam" : "Nữ",
-            gv.getTrangThai(),
-            gv.getDiaChi(),
-            gv.getSoDienThoai(),
-            gv.getBoMon(),
-        });
+
+    for (GiaoVien gv : danhSachCache) {
+        // So sánh keyword với các trường cần tìm
+        if (gv.getMaNguoiDung().toLowerCase().contains(keyword) ||
+            gv.getTenNguoiDung().toLowerCase().contains(keyword) ||
+            gv.getEmail().toLowerCase().contains(keyword) ||
+            gv.getBoMon().toLowerCase().contains(keyword) ||
+            gv.getVaitro().toLowerCase().contains(keyword)) {
+
+            tableModel.addRow(new Object[]{
+                gv.getMaNguoiDung(),
+                gv.getTenNguoiDung(),
+                gv.getEmail(),
+                gv.getNgaySinh(),
+                gv.isGioiTinh() ? "Nam" : "Nữ",
+                gv.getTrangThai(),
+                gv.getDiaChi(),
+                gv.getSoDienThoai(),
+                gv.getVaitro(),
+                gv.getBoMon()
+            });
+        }
     }
+    tableModel.fireTableDataChanged();
 }
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {
     int selectedRow = jTable1.getSelectedRow();
@@ -305,6 +315,7 @@ private void loadComboBoxMonHoc() {
     } else {
         JOptionPane.showMessageDialog(this, "Vui lòng chọn một dòng để xóa!", "Thông báo", JOptionPane.WARNING_MESSAGE);
     }
+    
 }
     private void Save() {
     String maGV = jTextField14.getText().trim();
@@ -382,7 +393,10 @@ private void loadComboBoxMonHoc() {
 
     // Thêm hoặc cập nhật
     if (isEditing) {
-        controller.capNhat(gv);
+        if(controller.capNhat(gv)){
+            JOptionPane.showMessageDialog(this, "Cập nhật thành công");
+        }
+        
 
         // Nếu giáo viên bị khóa => chuyển các lớp do GV này chủ nhiệm thành chưa có giáo viên
         if (trangThai.equals("Bị Khóa")) {
@@ -391,12 +405,14 @@ private void loadComboBoxMonHoc() {
         "Xác nhận cập nhật lớp học", JOptionPane.YES_NO_OPTION);
 
     if (confirm == JOptionPane.YES_OPTION) {
-        controller.xoaGiaoVienVaCapNhatLopHoc(maGV);
-        JOptionPane.showMessageDialog(this, "Đã cập nhật lớp học và xóa giáo viên.");
+        if(dao.giaLapChuaCoGiaoVien(maGV)){
+        JOptionPane.showMessageDialog(this, "Đã cập nhật giáo viên.");
         loadTableData();
         isEditing = false;
         lamMoi();
-        return; // Dừng luôn ở đây vì đã xóa giáo viên
+        } else{
+            JOptionPane.showMessageDialog(this, "Thất Bại");
+        }
     } else{
         return;
     }
@@ -406,7 +422,6 @@ private void loadComboBoxMonHoc() {
         controller.themMoi(gv);
         JOptionPane.showMessageDialog(this, "Thêm mới giáo viên thành công!");
     }
-
     loadTableData();
     isEditing = false;
     lamMoi();
@@ -446,7 +461,6 @@ private void loadComboBoxMonHoc() {
     setSelectedDate(null);
     jButton9.setVisible(false);
 }
-    
     private void setupPanelStyling() {
         String arcStyle = "arc: 20";
         jPanel5.putClientProperty("FlatLaf.style", arcStyle);
@@ -665,7 +679,6 @@ private void loadComboBoxMonHoc() {
 
         jTextField19.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jTextField19.setForeground(new java.awt.Color(128, 128, 128));
-        jTextField19.setText("Tìm kiếm giáo viên ....");
         jTextField19.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
                 jTextField19FocusGained(evt);
@@ -974,18 +987,10 @@ private void loadComboBoxMonHoc() {
 
     private void jTextField19FocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextField19FocusGained
         // TODO add your handling code here:
-        if (jTextField19.getText().trim().equals(PLACEHOLDER)) {
-        jTextField19.setText("");
-        jTextField19.setForeground(TEXT_COLOR);
-    }
     }//GEN-LAST:event_jTextField19FocusGained
 
     private void jTextField19FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextField19FocusLost
         // TODO add your handling code here:
-        if (jTextField19.getText().trim().isEmpty()) {
-        jTextField19.setText(PLACEHOLDER);
-        jTextField19.setForeground(PLACEHOLDER_COLOR);
-    }
     }//GEN-LAST:event_jTextField19FocusLost
 
     private void jButton10MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton10MouseClicked

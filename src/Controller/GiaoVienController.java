@@ -8,7 +8,7 @@ public class GiaoVienController {
     private final GiaoVienDAO dao;
 
     public GiaoVienController() {
-        this.dao = new GiaoVienDAO(null); // Kết nối đã được xử lý nội bộ trong DAO
+        this.dao = new GiaoVienDAO(); // Kết nối đã được xử lý nội bộ trong DAO
     }
 
     // Lấy danh sách giáo viên
@@ -61,7 +61,9 @@ public class GiaoVienController {
     return dao.xoaGiaoVienVaCapNhatLopHoc(maGiaoVien);
 }
     public List<String> layDanhSachLopChuNhiem(String maGiaoVien) {
-    GiaoVienDAO dao = new GiaoVienDAO(null);
     return dao.layDanhSachLopChuNhiem(maGiaoVien);
 }
+     public boolean Giaovienvenull(String maGiaoVien){
+         return dao.giaLapChuaCoGiaoVien(maGiaoVien);
+     }
 }

@@ -67,6 +67,7 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
         tableModel = new DefaultTableModel(columnNames, 0);
         jTable1.setModel(tableModel);
         loadTable();
+        jTextField19.putClientProperty("JTextField.placeholderText", "Tìm Kiếm Học Sinh ....");
         khoaTable(jTable1);
     }
     private void khoaTable(JTable table) {
@@ -561,7 +562,6 @@ private void xoaHocSinh() {
 
         jTextField19.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jTextField19.setForeground(new java.awt.Color(128, 128, 128));
-        jTextField19.setText("Tìm kiếm học sinh ....");
         jTextField19.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
                 jTextField19FocusGained(evt);
