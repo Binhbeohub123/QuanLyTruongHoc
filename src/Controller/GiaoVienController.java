@@ -63,7 +63,31 @@ public class GiaoVienController {
     public List<String> layDanhSachLopChuNhiem(String maGiaoVien) {
     return dao.layDanhSachLopChuNhiem(maGiaoVien);
 }
-     public boolean Giaovienvenull(String maGiaoVien){
+    public boolean Giaovienvenull(String maGiaoVien){
          return dao.giaLapChuaCoGiaoVien(maGiaoVien);
      }
+    public boolean kiemTraTrungTenNguoiDung(String ten) {
+    return dao.kiemTraTrungTenNguoiDung(ten);
+}
+
+// Check trùng email
+public boolean kiemTraTrungEmail(String email) {
+    return dao.kiemTraTrungEmail(email);
+}
+
+// Check trùng số điện thoại
+public boolean kiemTraTrungSDT(String sdt) {
+    return dao.kiemTraTrungSoDienThoai(sdt);
+}
+public boolean kiemTraTrungEmailKhiCapNhat(String email, String maNguoiDung) {
+    return dao.kiemTraTrungEmailKhiCapNhat(email, maNguoiDung);
+}
+
+public boolean kiemTraTrungSDTKhiCapNhat(String sdt, String maNguoiDung) {
+    return dao.kiemTraTrungSDTKhiCapNhat(sdt, maNguoiDung);
+}
+
+public boolean kiemTraTrungTenKhiCapNhat(String ten, String maNguoiDung) {
+    return dao.kiemTraTrungTenKhiCapNhat(ten, maNguoiDung);
+}
 }

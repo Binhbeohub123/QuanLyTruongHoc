@@ -29,19 +29,22 @@ import java.awt.Image;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Vector;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.RowFilter;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.table.TableRowSorter;
 
 /**
  *
  * @author acchi
  */
-public class QuanLyGiaoVien_View extends javax.swing.JPanel {
+public class QuanLyNguoiDung_View extends javax.swing.JPanel {
     private boolean isDatePickerVisible = false;
     private JDateChooser currentDateChooser = null;
     private GiaoVienController controller;
@@ -53,7 +56,7 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
     private boolean isEditing = false;
     private GiaoVienDAO dao = new GiaoVienDAO();
     
-    public QuanLyGiaoVien_View() {
+    public QuanLyNguoiDung_View() {
         setupTheme();
         initComponents();
         initializeForm();
@@ -75,6 +78,23 @@ public class QuanLyGiaoVien_View extends javax.swing.JPanel {
     }
         khoaTable(jTable1);
         jTextField19.putClientProperty("JTextField.placeholderText", "Tìm kiếm giáo viên ....");
+        jTextField19.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+    @Override
+    public void insertUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemGiaoVien();
+    }
+
+    @Override
+    public void removeUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemGiaoVien();
+    }
+
+    @Override
+    public void changedUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemGiaoVien();
+    }
+});
+        jPasswordField1.putClientProperty("JTextField.placeholderText", "***********");
     }
       private void khoaTable(JTable table) {
     // Khóa chỉnh sửa cell
@@ -105,7 +125,7 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     return columnNames;
 }  
 private void loadComboBoxMonHoc() {
-    List<String> listMaMonHoc = dao.getAllMaMonHoc();
+    List<String> listMaMonHoc = dao.getAllTenMonHoc();
     
     jComboBox3.removeAllItems();
     for (String ma : listMaMonHoc) {
@@ -173,6 +193,11 @@ private void loadComboBoxMonHoc() {
         JOptionPane.showMessageDialog(this, "Số điện thoại phải đủ 10 số và bắt đầu bằng 0!", "Lỗi", JOptionPane.WARNING_MESSAGE);
         return false;
     }
+    // Kiểm tra địa chỉ có chứa ký tự đặc biệt không hợp lệ
+if (!diaChi.matches("^[\\p{L}0-9\\s,\\.\\-\\/]+$")) {
+    JOptionPane.showMessageDialog(this, "Địa chỉ không được chứa ký tự đặc biệt!\nChỉ cho phép chữ, số, khoảng trắng và các dấu: , . - /", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    return false;
+}
 
     // Kiểm tra ngày sinh
     try {
@@ -197,34 +222,16 @@ private void loadComboBoxMonHoc() {
 
     return true;
 }
-    private void timKiemGiaoVien() {
-    String keyword = jTextField19.getText().trim().toLowerCase();
+   private void timKiemGiaoVien() {
+    String keyword = jTextField19.getText().trim();
+    TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+    jTable1.setRowSorter(sorter);
 
-    tableModel.setRowCount(0);
-
-    for (GiaoVien gv : danhSachCache) {
-        // So sánh keyword với các trường cần tìm
-        if (gv.getMaNguoiDung().toLowerCase().contains(keyword) ||
-            gv.getTenNguoiDung().toLowerCase().contains(keyword) ||
-            gv.getEmail().toLowerCase().contains(keyword) ||
-            gv.getBoMon().toLowerCase().contains(keyword) ||
-            gv.getVaitro().toLowerCase().contains(keyword)) {
-
-            tableModel.addRow(new Object[]{
-                gv.getMaNguoiDung(),
-                gv.getTenNguoiDung(),
-                gv.getEmail(),
-                gv.getNgaySinh(),
-                gv.isGioiTinh() ? "Nam" : "Nữ",
-                gv.getTrangThai(),
-                gv.getDiaChi(),
-                gv.getSoDienThoai(),
-                gv.getVaitro(),
-                gv.getBoMon()
-            });
-        }
+    if (keyword.isEmpty() || keyword.equals("Tìm kiếm giáo viên ....")) {
+        sorter.setRowFilter(null); // Xóa filter => Hiện tất cả
+    } else {
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
     }
-    tableModel.fireTableDataChanged();
 }
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {
     int selectedRow = jTable1.getSelectedRow();
@@ -317,6 +324,22 @@ private void loadComboBoxMonHoc() {
     }
     
 }
+    private int tinhTuoi(Date ngaySinh) {
+    Calendar birth = Calendar.getInstance();
+    birth.setTime(ngaySinh);
+
+    Calendar today = Calendar.getInstance();
+
+    int tuoi = today.get(Calendar.YEAR) - birth.get(Calendar.YEAR);
+
+    // Nếu tháng sinh chưa đến hoặc ngày sinh chưa đến trong năm nay thì trừ đi 1
+    if (today.get(Calendar.MONTH) < birth.get(Calendar.MONTH) ||
+        (today.get(Calendar.MONTH) == birth.get(Calendar.MONTH) && today.get(Calendar.DAY_OF_MONTH) < birth.get(Calendar.DAY_OF_MONTH))) {
+        tuoi--;
+    }
+
+    return tuoi;
+}
     private void Save() {
     String maGV = jTextField14.getText().trim();
     String ten = jTextField20.getText().trim();
@@ -335,9 +358,52 @@ private void loadComboBoxMonHoc() {
         return;
     }
 
-    // Kiểm tra đầu vào hợp lệ
+    // Kiểm tra tuổi >= 21
+    int tuoi = tinhTuoi(ngaySinh);
+    
+    if (tuoi < 21) {
+        JOptionPane.showMessageDialog(this, "Giáo viên phải từ 21 tuổi trở lên!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+         return;
+    }   
+    if (tuoi >70) {
+        JOptionPane.showMessageDialog(this, "Tôi nghĩ bạn nên nghỉ hưu", "Lỗi", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Kiểm tra đầu vào hợp lệ (trống, email, sdt, địa chỉ)
     if (!validateInput()) {
         return;
+    }
+    if (!isEditing) { // Thêm mới
+        if (controller.kiemTraTrungTenNguoiDung(ten)) {
+            JOptionPane.showMessageDialog(this, "Tên người dùng đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controller.kiemTraTrungEmail(email)) {
+            JOptionPane.showMessageDialog(this, "Email đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controller.kiemTraTrungSDT(sdt)) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+    } else { // Cập nhật
+        if (controller.kiemTraTrungTenKhiCapNhat(ten, maGV)) {
+            JOptionPane.showMessageDialog(this, "Tên người dùng đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controller.kiemTraTrungEmailKhiCapNhat(email, maGV)) {
+            JOptionPane.showMessageDialog(this, "Email đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controller.kiemTraTrungSDTKhiCapNhat(sdt, maGV)) {
+            JOptionPane.showMessageDialog(this, "Số điện thoại đã tồn tại!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
     }
 
     // Xử lý mật khẩu
@@ -359,7 +425,6 @@ private void loadComboBoxMonHoc() {
 
             passwordEncoded = maHoaMatKhau(passwordInput);
         } else {
-            // Không đổi mật khẩu
             passwordEncoded = controller.layMatKhauTuDB(maGV);
         }
     } else {
@@ -370,7 +435,7 @@ private void loadComboBoxMonHoc() {
         passwordEncoded = maHoaMatKhau(passwordInput);
     }
 
-    // Xử lý ảnh: nếu không chọn ảnh mới thì giữ ảnh cũ (nếu đang sửa)
+    // Xử lý ảnh
     if (isEditing && selectedImageBase64 == null) {
         selectedImageBase64 = controller.layAnhNguoiDung(maGV);
     }
@@ -393,73 +458,88 @@ private void loadComboBoxMonHoc() {
 
     // Thêm hoặc cập nhật
     if (isEditing) {
-        if(controller.capNhat(gv)){
-            JOptionPane.showMessageDialog(this, "Cập nhật thành công");
-        }
-        
+        if (controller.capNhat(gv)) {
+            JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+            // Nếu giáo viên bị khóa và có lớp chủ nhiệm, xử lý tiếp
+            List<String> lopChuNhiem = controller.layDanhSachLopChuNhiem(maGV);
+            if (!lopChuNhiem.isEmpty() && trangThai.equals("Bị Khóa")) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "Giáo viên đang chủ nhiệm lớp.\nBạn có muốn gỡ các lớp của giáo viên này về trạng thái chưa có giáo viên?",
+                        "Xác nhận cập nhật lớp học", JOptionPane.YES_NO_OPTION);
 
-        // Nếu giáo viên bị khóa => chuyển các lớp do GV này chủ nhiệm thành chưa có giáo viên
-        if (trangThai.equals("Bị Khóa")) {
-    int confirm = JOptionPane.showConfirmDialog(this,
-        "Giáo viên đang chủ nhiệm lớp.\nBạn có muốn gỡ các lớp của giáo viên này về trạng thái chưa có giáo viên?",
-        "Xác nhận cập nhật lớp học", JOptionPane.YES_NO_OPTION);
-
-    if (confirm == JOptionPane.YES_OPTION) {
-        if(dao.giaLapChuaCoGiaoVien(maGV)){
-        JOptionPane.showMessageDialog(this, "Đã cập nhật giáo viên.");
-        loadTableData();
-        isEditing = false;
-        lamMoi();
-        } else{
-            JOptionPane.showMessageDialog(this, "Thất Bại");
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (controller.Giaovienvenull(maGV)) {
+                        JOptionPane.showMessageDialog(this, "Đã cập nhật lớp học về trạng thái chưa có giáo viên.");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Cập nhật lớp học thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Cập nhật thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
         }
-    } else{
-        return;
-    }
-}
-        
     } else {
-        controller.themMoi(gv);
-        JOptionPane.showMessageDialog(this, "Thêm mới giáo viên thành công!");
+        if (controller.themMoi(gv)) {
+            JOptionPane.showMessageDialog(this, "Thêm mới giáo viên thành công!");
+        } else {
+            JOptionPane.showMessageDialog(this, "Thêm mới giáo viên thất bại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
     }
-    loadTableData();
-    isEditing = false;
+
+    // Sau khi thêm hoặc sửa xong => reset form + load lại bảng
     lamMoi();
+    loadTableData();
 }
 
         
     private void lamMoi() {
-    if (currentDateChooser != null) {
-        jPanel5.remove(currentDateChooser);
-        currentDateChooser = null;
-        isDatePickerVisible = false;
-    }
-    setupDateField();
-    if (isEditing) {
-        jLabel21.setText("Chỉnh Sửa Người Dùng");
-        jPasswordField1.setEnabled(false);
-        // Không gen mã mới khi chỉnh sửa
-    } else {
-        jLabel21.setText("Thêm Người Dùng Mới");
-        jPasswordField1.setEnabled(true);
-        jTextField14.setText(dao.sinhMaNguoiDungMoi());
-    }
-
+    isEditing = false;
+    jLabel21.setText("Thêm Người Dùng Mới");
+    jTextField14.setText(dao.sinhMaNguoiDungMoi());
     jTextField14.setEditable(false);
+
+    // Reset các trường text
     jTextField20.setText("");
     jTextField16.setText("");
     jTextField15.setText("");
-    jTextField17.setText("");
-    jTextArea3.setText("");
     jPasswordField1.setText("");
+    jPasswordField1.setEnabled(true);
+    jTextArea3.setText("");
+
+    // Xóa DatePicker cũ nếu có
+    if (currentDateChooser != null) {
+        jPanel5.remove(currentDateChooser);
+        currentDateChooser = null;
+    }
+
+    jTextField17.setText("");
+    jTextField17.setVisible(true);
+
+    // Reset combo box
     jComboBox1.setSelectedIndex(0);
+    jComboBox2.setSelectedIndex(0);
     jComboBox3.setSelectedIndex(0);
     jComboBox4.setSelectedIndex(0);
+
+    // Reset ảnh
     selectedImageBase64 = null;
     jLabel22.setIcon(null);
     jLabel23.setText("Chưa có ảnh");
-    setSelectedDate(null);
+
     jButton9.setVisible(false);
+
+    // Reset tìm kiếm
+    if (jTable1.getRowSorter() != null) {
+        jTable1.setRowSorter(null);
+    }
+
+    jTextField19.setText("Tìm kiếm giáo viên ....");
+    jTextField19.setForeground(new Color(150, 150, 150));
+
+    // Setup lại date field để tránh lỗi
+    setupDateField();
 }
     private void setupPanelStyling() {
         String arcStyle = "arc: 20";
@@ -509,33 +589,27 @@ private void loadComboBoxMonHoc() {
     }
     
     private void showDatePicker() {
-    if (isDatePickerVisible) return;
+    if (currentDateChooser != null) {
+        jPanel5.remove(currentDateChooser);
+        currentDateChooser = null;
+    }
 
     try {
-        isDatePickerVisible = true;
-
-        JDateChooser dateChooser = new JDateChooser();
-        dateChooser.setDateFormatString("dd/MM/yyyy");
-        dateChooser.setPreferredSize(new Dimension(400, 50));
-        dateChooser.setFont(new java.awt.Font("Segoe UI", 0, 14));
+        currentDateChooser = new JDateChooser();
+        currentDateChooser.setDateFormatString("dd/MM/yyyy");
+        currentDateChooser.setPreferredSize(new Dimension(400, 50));
+        currentDateChooser.setFont(new java.awt.Font("Segoe UI", 0, 14));
 
         Date currentDate = getCurrentDateFromField();
         if (currentDate != null) {
-            dateChooser.setDate(currentDate);
-        } else {
-            Date today = new Date();
-            dateChooser.setDate(today);
-            // Đồng bộ ngay với jTextField17
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-            jTextField17.setText(sdf.format(today));
+            currentDateChooser.setDate(currentDate);
         }
 
         jTextField17.setVisible(false);
-        jPanel5.add(dateChooser, new AbsoluteConstraints(470, 300, 400, 50));
-        currentDateChooser = dateChooser;
+        jPanel5.add(currentDateChooser, new AbsoluteConstraints(470, 300, 400, 50));
 
-        dateChooser.addPropertyChangeListener("date", evt -> {
-            Date selectedDate = dateChooser.getDate();
+        currentDateChooser.addPropertyChangeListener("date", evt -> {
+            Date selectedDate = currentDateChooser.getDate();
             if (selectedDate != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
                 jTextField17.setText(sdf.format(selectedDate));
@@ -546,8 +620,7 @@ private void loadComboBoxMonHoc() {
         jPanel5.repaint();
 
     } catch (Exception e) {
-        System.err.println("Error showing date picker: " + e.getMessage());
-        isDatePickerVisible = false;
+        e.printStackTrace();
     }
 }
     
@@ -715,7 +788,7 @@ private void loadComboBoxMonHoc() {
 
         jLabel31.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
         jLabel31.setForeground(java.awt.Color.darkGray);
-        jLabel31.setText("Danh sách giáo viên");
+        jLabel31.setText("Danh sách người sách");
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -982,7 +1055,6 @@ private void loadComboBoxMonHoc() {
 
     private void jTextField19ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField19ActionPerformed
         // TODO add your handling code here:
-        timKiemGiaoVien();
     }//GEN-LAST:event_jTextField19ActionPerformed
 
     private void jTextField19FocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextField19FocusGained

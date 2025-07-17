@@ -8,7 +8,7 @@ public class HocSinhController {
     private final HocSinhDAO dao;
 
     public HocSinhController() {
-        this.dao = new HocSinhDAO(null); // HocSinhDAO tự khởi tạo kết nối DB bên trong
+        this.dao = new HocSinhDAO(); // HocSinhDAO tự khởi tạo kết nối DB bên trong
     }
 
     // Lấy danh sách tất cả học sinh
@@ -45,7 +45,15 @@ public class HocSinhController {
         return dao.search(keyword);
     }
     public String sinhMaHocSinhMoi() {
-            String maMoi = dao.generateRandomMaHocSinh();
-            return maMoi;
+        return dao.sinhMaHocSinhMoi();
         }
+    public boolean kiemTraTrungTenHocSinh(String ten) {
+        return dao.checkTrungTen(ten);
+    }
+
+    // Check trùng tên khi cập nhật
+    public boolean kiemTraTrungTenHocSinhKhiCapNhat(String ten, String maHS) {
+        return dao.checkTrungTenKhiCapNhat(ten, maHS);
+    }
+
 }

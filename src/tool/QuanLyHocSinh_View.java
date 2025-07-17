@@ -24,12 +24,15 @@ import Model.HocSinh;
 import java.awt.Image;
 import java.io.File;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Vector;
 import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 /**
  *
@@ -39,11 +42,10 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
     
     private boolean isDatePickerVisible = false;
     private JDateChooser currentDateChooser = null;
-    private HocSinhDAO lopDAO = new HocSinhDAO(null);
+    private HocSinhDAO lopDAO = new HocSinhDAO();
     private HocSinhController controller = new HocSinhController();
     private List<HocSinh> danhSachCache;
     private DefaultTableModel tableModel;
-    private final String PLACEHOLDER = "Tìm kiếm giáo viên ...";
     private boolean isEditing = false;
     private String selectedImageBase64 = null;
     private final Color PLACEHOLDER_COLOR = new Color(150, 150, 150);
@@ -69,6 +71,21 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
         loadTable();
         jTextField19.putClientProperty("JTextField.placeholderText", "Tìm Kiếm Học Sinh ....");
         khoaTable(jTable1);
+        jTextField19.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+    @Override
+    public void insertUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemHocSinh();
+    }
+    @Override
+    public void removeUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemHocSinh();
+    }
+
+    @Override
+    public void changedUpdate(javax.swing.event.DocumentEvent e) {
+        timKiemHocSinh();
+    }
+});
     }
     private void khoaTable(JTable table) {
     // Khóa chỉnh sửa cell
@@ -95,7 +112,22 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     }
     return columnNames;
 }  
-    
+     private int tinhTuoi(Date ngaySinh) {
+    Calendar birth = Calendar.getInstance();
+    birth.setTime(ngaySinh);
+
+    Calendar today = Calendar.getInstance();
+
+    int tuoi = today.get(Calendar.YEAR) - birth.get(Calendar.YEAR);
+
+    // Nếu tháng sinh chưa đến hoặc ngày sinh chưa đến trong năm nay thì trừ đi 1
+    if (today.get(Calendar.MONTH) < birth.get(Calendar.MONTH) ||
+        (today.get(Calendar.MONTH) == birth.get(Calendar.MONTH) && today.get(Calendar.DAY_OF_MONTH) < birth.get(Calendar.DAY_OF_MONTH))) {
+        tuoi--;
+    }
+
+    return tuoi;
+}
     private void setupTheme() {
         try {
             FlatLightLaf.setup();
@@ -172,23 +204,29 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
 
             String base64 = hs.getAnhnguoidung();
             if (base64 != null && !base64.isEmpty()) {
-              try {
-                  byte[] imageBytes = Base64.getDecoder().decode(base64);
-                  ImageIcon icon = new ImageIcon(imageBytes);
-                  Image img = icon.getImage().getScaledInstance(399, 360, Image.SCALE_SMOOTH);
-                  jLabel22.setIcon(new ImageIcon(img));
-                  jLabel23.setText("Đã có ảnh");
-              } catch (Exception e) {
-                  e.printStackTrace();
-                  jLabel22.setIcon(null);
-                  jLabel23.setText("Lỗi ảnh");
-              }
-          } else {
-              jLabel22.setIcon(null);
-              jLabel23.setText("Chưa có ảnh");
-          }
+                try {
+                    byte[] imageBytes = Base64.getDecoder().decode(base64);
+                    ImageIcon icon = new ImageIcon(imageBytes);
+                    Image img = icon.getImage().getScaledInstance(399, 360, Image.SCALE_SMOOTH);
+                    jLabel22.setIcon(new ImageIcon(img));
+                    jLabel23.setText("Đã có ảnh");
+
+                    // Giữ ảnh cũ để khi không chọn ảnh mới thì vẫn lưu lại
+                    selectedImageBase64 = base64;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    jLabel22.setIcon(null);
+                    jLabel23.setText("Lỗi ảnh");
+                    selectedImageBase64 = null; // Tránh bị nullPointer khi ảnh lỗi
+                }
+            } else {
+                jLabel22.setIcon(null);
+                jLabel23.setText("Chưa có ảnh");
+                selectedImageBase64 = null;
+            }
         } else {
-            JOptionPane.showMessageDialog(this, "Không tìm thấy dữ liệu giáo viên!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Không tìm thấy dữ liệu học sinh!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 }
@@ -326,112 +364,81 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     }
     private void timKiemHocSinh() {
     String keyword = jTextField19.getText().trim();
-    List<HocSinh> ketQua = controller.timKiemHocSinh(keyword);
-    // Xóa hết dòng cũ
-    tableModel.setRowCount(0);
+    TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+    jTable1.setRowSorter(sorter);
 
-    // Đổ dữ liệu mới, đúng thứ tự 7 cột
-    for (HocSinh hs : ketQua) {
-        tableModel.addRow(new Object[]{
-            hs.getMaHocSinh(),                         // Mã HS
-            hs.getHoTen(),                             // Họ và Tên
-            hs.getNgaySinh(),                          // Ngày Sinh
-            hs.isGioiTinh() ? "Nam" : "Nữ",            // Giới Tính
-            hs.getTrangThai(),                         // Trạng Thái
-            hs.getThongTinPhuHuynh(),                  // Thông Tin Phụ Huynh
-            hs.getMaLop()                              // Mã Lớp
-        });
+    if (keyword.isEmpty() || keyword.equals("Tìm kiếm học sinh ....")) {
+        sorter.setRowFilter(null); // Xóa filter => Hiện tất cả
+    } else {
+        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + keyword));
     }
 }
     private void Save() {
-    // Lấy dữ liệu từ form
     String maHS = jTextField14.getText().trim();
-    String hoTen = jTextField15.getText().trim();
-    String ngaySinhStr = jTextField17.getText().trim();
-    String thongTinPH = jTextArea3.getText().trim();
+    String ten = jTextField15.getText().trim();
+    String thongTinPhuHuynh = jTextArea3.getText().trim();
+    String gioiTinh = jComboBox1.getSelectedItem().toString();
+    String trangThai = jComboBox3.getSelectedItem().toString();
+    String lopHoc = jComboBox2.getSelectedItem().toString();
 
-    // Check null hoặc rỗng
-    if (hoTen.isEmpty() || ngaySinhStr.isEmpty() || thongTinPH.isEmpty()) {
-        JOptionPane.showMessageDialog(this, 
-            "Vui lòng nhập đầy đủ thông tin (Họ tên, Ngày sinh, Thông tin phụ huynh)", 
-            "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+    Date ngaySinh = getCurrentDateFromField();
+    if (ngaySinh == null) {
+        JOptionPane.showMessageDialog(this, "Vui lòng nhập ngày sinh hợp lệ", "Lỗi", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
-    // Check ngày sinh hợp lệ
-    Date ngaySinh;
-    try {
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        sdf.setLenient(false);
-        ngaySinh = sdf.parse(ngaySinhStr);
-        
-        // Không cho phép nhập ngày sinh lớn hơn ngày hiện tại
-        if (ngaySinh.after(new Date())) {
-            JOptionPane.showMessageDialog(this, 
-                "Ngày sinh không được lớn hơn ngày hiện tại!", 
-                "Lỗi", JOptionPane.WARNING_MESSAGE);
+    int tuoi = tinhTuoi(ngaySinh);
+    if (tuoi < 5 || tuoi > 100) {
+        JOptionPane.showMessageDialog(this, "Tuổi học sinh phải từ 5 đến 100", "Lỗi", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Validate thông tin
+    if (ten.isEmpty() || thongTinPhuHuynh.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Kiểm tra tên có chứa ký tự đặc biệt
+    if (!ten.matches("^[\\p{L}\\s\\-\\.]+$")) {
+        JOptionPane.showMessageDialog(this, "Tên học sinh không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Kiểm tra thông tin phụ huynh (địa chỉ)
+    if (!thongTinPhuHuynh.matches("^[\\p{L}0-9\\s,\\.\\-/]+$")) {
+        JOptionPane.showMessageDialog(this, "Thông tin phụ huynh không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Check trùng tên
+    if (!isEditing) {
+        if (controller.kiemTraTrungTenHocSinh(ten)) {
+            JOptionPane.showMessageDialog(this, "Tên học sinh đã tồn tại", "Lỗi", JOptionPane.WARNING_MESSAGE);
             return;
         }
-    } catch (ParseException e) {
-        JOptionPane.showMessageDialog(this, 
-            "Ngày sinh không hợp lệ. Vui lòng nhập đúng định dạng dd/MM/yyyy", 
-            "Lỗi", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
-
-    // Check chọn giới tính
-    if (jComboBox1.getSelectedIndex() == -1) {
-        JOptionPane.showMessageDialog(this, 
-            "Vui lòng chọn giới tính!", 
-            "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    // Check trạng thái
-    if (jComboBox3.getSelectedIndex() == -1) {
-        JOptionPane.showMessageDialog(this, 
-            "Vui lòng chọn trạng thái!", 
-            "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    // Check mã lớp
-    if (jComboBox2.getSelectedIndex() == -1 || 
-        jComboBox2.getSelectedItem().toString().contains("Load từ")) {
-        JOptionPane.showMessageDialog(this, 
-            "Vui lòng chọn mã lớp học!", 
-            "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    // Lấy thông tin từ combo
-    boolean gioiTinh = jComboBox1.getSelectedItem().toString().equals("Nam");
-    String trangThai = jComboBox3.getSelectedItem().toString();
-    String maLop = jComboBox2.getSelectedItem().toString().trim();
-
-    // Tạo đối tượng HocSinh
-    HocSinh hs = new HocSinh(
-        maHS,
-        hoTen,
-        ngaySinh,
-        gioiTinh,
-        trangThai,
-        thongTinPH,
-        maLop,
-        selectedImageBase64
-    );
-
-    // Gọi Controller
-    if (isEditing) {
-        controller.capNhat(hs);
-        JOptionPane.showMessageDialog(this, "Cập nhật thông tin học sinh thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
     } else {
-        controller.Themmoi(hs);
-        JOptionPane.showMessageDialog(this, "Thêm học sinh mới thành công!", "Thành công", JOptionPane.INFORMATION_MESSAGE);
+        if (controller.kiemTraTrungTenHocSinhKhiCapNhat(ten, maHS)) {
+            JOptionPane.showMessageDialog(this, "Tên học sinh đã tồn tại", "Lỗi", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
     }
 
-    loadTable();
-    lamMoi();
+    // Tạo đối tượng Học Sinh (giả sử có cả ảnh nếu có selectedImageBase64)
+    HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, thongTinPhuHuynh, lopHoc, selectedImageBase64);
+
+    // Thêm hoặc cập nhật
+    boolean success = isEditing ? controller.capNhat(hs) : controller.Themmoi(hs);
+
+    if (success) {
+    JOptionPane.showMessageDialog(this, isEditing ? "Cập nhật thành công" : "Thêm mới thành công");
+
+    // Cập nhật danh sách Cache và hiển thị lại bảng ngay lập tức
+    loadTable(); // Đảm bảo load lại từ CSDL
+    isEditing = false; // Reset trạng thái về thêm mới
+
+    lamMoi(); // Làm mới form
+}
 }
 private void lamMoi() {
     // Reset date picker
@@ -861,18 +868,10 @@ private void xoaHocSinh() {
 
     private void jTextField19FocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextField19FocusGained
         // TODO add your handling code here:
-        if (jTextField19.getText().trim().equals(PLACEHOLDER)) {
-        jTextField19.setText("");
-        jTextField19.setForeground(TEXT_COLOR);
-    }
     }//GEN-LAST:event_jTextField19FocusGained
 
     private void jTextField19FocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_jTextField19FocusLost
         // TODO add your handling code here:
-        if (jTextField19.getText().trim().isEmpty()) {
-        jTextField19.setText(PLACEHOLDER);
-        jTextField19.setForeground(PLACEHOLDER_COLOR);
-    }
     }//GEN-LAST:event_jTextField19FocusLost
 
     private void jButton11MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton11MouseClicked

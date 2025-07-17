@@ -10,9 +10,9 @@ import java.util.Random;
 import java.util.Set;
 
 public class HocSinhDAO {
-    private static Connection conn;
+    private Connection conn;
      
-    public HocSinhDAO(Connection conn) {
+    public HocSinhDAO() {
         this.conn = XJdbc.openConnection();
     }
 
@@ -40,55 +40,39 @@ public class HocSinhDAO {
     }
 
     public boolean insert(HocSinh hs) {
-        String sql = "INSERT INTO HocSinh "
-            + "(MaHocSinh, HoTen, NgaySinh, GioiTinh, Trang_thai, ThongTinPhuHuynh, MaLop) "
-            + "VALUES(?,?,?,?,?,?,?)";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, hs.getMaHocSinh());
-            ps.setString(2, hs.getHoTen());
-            ps.setDate(3, new java.sql.Date(hs.getNgaySinh().getTime()));
-            ps.setBoolean(4, hs.isGioiTinh());
-            ps.setString(5, hs.getTrangThai());
-            ps.setString(6, hs.getThongTinPhuHuynh());
-            ps.setString(7, hs.getMaLop());
-            ps.setString(8, hs.getAnhnguoidung());
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+    String sql = "INSERT INTO HocSinh (MaHocSinh, HoTen, NgaySinh, GioiTinh, Trang_thai, ThongTinPhuHuynh, MaLop, Anh) VALUES (?,?,?,?,?,?,?,?)";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, hs.getMaHocSinh());
+        ps.setString(2, hs.getHoTen());
+        ps.setDate(3, new java.sql.Date(hs.getNgaySinh().getTime()));
+        ps.setBoolean(4, hs.isGioiTinh());
+        ps.setString(5, hs.getTrangThai());
+        ps.setString(6, hs.getThongTinPhuHuynh());
+        ps.setString(7, hs.getMaLop());
+        ps.setString(8, hs.getAnhnguoidung()); // Lưu ảnh Base64
+        return ps.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+    return false;
+}
 
     public boolean update(HocSinh hs) {
-    // 1. Thêm Anh=? vào SET, tổng cộng 7 dấu ? ở SET + 1 ở WHERE = 8
-    String sql = "UPDATE HocSinh SET "
-        + "HoTen = ?, "
-        + "NgaySinh = ?, "
-        + "GioiTinh = ?, "
-        + "Trang_thai = ?, "
-        + "ThongTinPhuHuynh = ?, "
-        + "MaLop = ?, "
-        + "Anh = ? "
-        + "WHERE MaHocSinh = ?";
-
+    String sql = "UPDATE HocSinh SET HoTen=?, NgaySinh=?, GioiTinh=?, Trang_thai=?, ThongTinPhuHuynh=?, MaLop=?, Anh=? WHERE MaHocSinh=?";
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
-        // 2. Gán tham số đúng thứ tự
         ps.setString(1, hs.getHoTen());
         ps.setDate(2, new java.sql.Date(hs.getNgaySinh().getTime()));
         ps.setBoolean(3, hs.isGioiTinh());
         ps.setString(4, hs.getTrangThai());
         ps.setString(5, hs.getThongTinPhuHuynh());
         ps.setString(6, hs.getMaLop());
-        // Nếu getAnhnguoidung() trả về byte[], dùng setBytes; 
-        // nếu trả về Base64 string, dùng setString.
-        ps.setString(7, hs.getAnhnguoidung());  
+        ps.setString(7, hs.getAnhnguoidung()); // Lưu ảnh Base64
         ps.setString(8, hs.getMaHocSinh());
-
         return ps.executeUpdate() > 0;
     } catch (SQLException e) {
         e.printStackTrace();
-        return false;
     }
+    return false;
 }
 
     public boolean delete(String maHocSinh) {
@@ -170,27 +154,60 @@ public class HocSinhDAO {
         }
         return ds;
     }
-    public String generateRandomMaHocSinh() {
-        // Lấy về tất cả mã HS hiện có để kiểm tra trùng
-        Set<String> existing = new HashSet<>();
-        String sql = "SELECT MaHocSinh FROM HocSinh";
-        try (PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                existing.add(rs.getString("MaHocSinh"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public String sinhMaHocSinhMoi() {
+    String prefix = "HS";
+    String sql = "SELECT TOP 1 MaHocSinh FROM HocSinh WHERE MaHocSinh LIKE ? " +
+                 "ORDER BY CONVERT(INT, SUBSTRING(MaHocSinh, 3, LEN(MaHocSinh))) DESC";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, prefix + "%");
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                String last = rs.getString("MaHocSinh");
+                int num = Integer.parseInt(last.substring(prefix.length()));
+                int next = num + 1;
 
-        // Sinh cho đến khi không trùng
-        Random rnd = new Random();
-        String candidate;
-        do {
-            int num = rnd.nextInt(10_000);        // 0..9999
-            candidate = String.format("HS%04d", num);
-        } while (existing.contains(candidate));
-        return candidate;
+                // Bỏ qua từ HS001 đến HS009 => bắt đầu từ HS10 trở lên
+                if (next < 10) {
+                    next = 10;
+                }
+
+                return prefix + next;
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+
+    // Nếu chưa có mã nào trong DB, bắt đầu từ HS10 luôn
+    return prefix + "10";
+}
+    public boolean checkTrungTen(String ten) {
+    String sql = "SELECT COUNT(*) FROM HocSinh WHERE HoTen = ?";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, ten);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt(1) > 0;
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return false;
+}
+
+public boolean checkTrungTenKhiCapNhat(String ten, String maHS) {
+    String sql = "SELECT COUNT(*) FROM HocSinh WHERE HoTen = ? AND MaHocSinh <> ?";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, ten);
+        ps.setString(2, maHS);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return rs.getInt(1) > 0;
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return false;
+}
 }
 
