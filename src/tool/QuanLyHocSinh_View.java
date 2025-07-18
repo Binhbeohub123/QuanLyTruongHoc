@@ -63,8 +63,11 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
     "Ngày Sinh",
     "Giới Tính",
     "Trạng Thái",
-    "Thông Tin Phụ Huynh",
-    "Mã Lớp"
+    "Tên Cha",
+    "SĐT Cha",
+    "Tên Mẹ",
+    "SĐT Mẹ",
+    "Mã Lớp",
 };
         tableModel = new DefaultTableModel(columnNames, 0);
         jTable1.setModel(tableModel);
@@ -146,8 +149,8 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
         setupDateField();
         setupPanelStyling();
         loadCombobox();
-        jTextField14.setText(controller.sinhMaHocSinhMoi());
-        jTextField14.setEditable(false);
+        jTextField16.setText(controller.sinhMaHocSinhMoi());
+        jTextField16.setEditable(false);
     }
     private void loadCombobox() {
     jComboBox2.removeAllItems();
@@ -166,7 +169,10 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
             hs.getNgaySinh(),
             hs.isGioiTinh() ? "Nam" : "Nữ",
             hs.getTrangThai(),
-            hs.getThongTinPhuHuynh(),
+            hs.getTenCha(),
+            hs.getSdtCha(),
+            hs.getTenMe(),
+            hs.getSdtMe(),
             hs.getMaLop()
         });
     }
@@ -185,7 +191,7 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
 
         if (hs != null) {
             // 3. Đổ dữ liệu lên form
-            jTextField14.setText(hs.getMaHocSinh());
+            jTextField16.setText(hs.getMaHocSinh());
             jTextField15.setText(hs.getHoTen());
 
             // Ngày sinh
@@ -200,7 +206,10 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
             jComboBox1.setSelectedItem(hs.isGioiTinh() ? "Nam" : "Nữ");
             jComboBox3.setSelectedItem(hs.getTrangThai());
             jComboBox2.setSelectedItem(hs.getMaLop());
-            jTextArea3.setText(hs.getThongTinPhuHuynh());
+            jTextField18.setText(hs.getTenCha());
+            jTextField21.setText(hs.getSdtCha());
+            jTextField20.setText(hs.getTenMe());
+            jTextField22.setText(hs.getSdtMe());
 
             String base64 = hs.getAnhnguoidung();
             if (base64 != null && !base64.isEmpty()) {
@@ -374,11 +383,14 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     }
 }
     private void Save() {
-    String maHS = jTextField14.getText().trim();
+    String maHS = jTextField16.getText().trim();
     String ten = jTextField15.getText().trim();
-    String thongTinPhuHuynh = jTextArea3.getText().trim();
     String gioiTinh = jComboBox1.getSelectedItem().toString();
     String trangThai = jComboBox3.getSelectedItem().toString();
+    String tencha = jTextField18.getText().trim();
+    String sdtcha = jTextField21.getText().trim();
+    String tenme = jTextField20.getText().trim();
+    String sdtme = jTextField22.getText().trim();
     String lopHoc = jComboBox2.getSelectedItem().toString();
 
     Date ngaySinh = getCurrentDateFromField();
@@ -388,26 +400,29 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     }
 
     int tuoi = tinhTuoi(ngaySinh);
-    if (tuoi < 5 || tuoi > 100) {
-        JOptionPane.showMessageDialog(this, "Tuổi học sinh phải từ 5 đến 100", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    if (tuoi < 15 || tuoi > 50) {
+        JOptionPane.showMessageDialog(this, "Tuổi học sinh phải từ 15 đến 50", "Lỗi", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
-    // Validate thông tin
-    if (ten.isEmpty() || thongTinPhuHuynh.isEmpty()) {
-        JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+    // Kiểm tra tên học sinh có rỗng không
+    if (ten.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng nhập tên học sinh", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // Validate phụ huynh: ít nhất 1 tên cha/mẹ và 1 số điện thoại cha/mẹ
+    boolean coTenPhuHuynh = !tencha.isEmpty() || !tenme.isEmpty();
+    boolean coSDTPhuHuynh = !sdtcha.isEmpty() || !sdtme.isEmpty();
+
+    if (!coTenPhuHuynh || !coSDTPhuHuynh) {
+        JOptionPane.showMessageDialog(this, "Vui lòng nhập ít nhất 1 tên phụ huynh và 1 số điện thoại phụ huynh!", "Thiếu thông tin", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
     // Kiểm tra tên có chứa ký tự đặc biệt
     if (!ten.matches("^[\\p{L}\\s\\-\\.]+$")) {
         JOptionPane.showMessageDialog(this, "Tên học sinh không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    // Kiểm tra thông tin phụ huynh (địa chỉ)
-    if (!thongTinPhuHuynh.matches("^[\\p{L}0-9\\s,\\.\\-/]+$")) {
-        JOptionPane.showMessageDialog(this, "Thông tin phụ huynh không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
         return;
     }
 
@@ -424,22 +439,21 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
         }
     }
 
-    // Tạo đối tượng Học Sinh (giả sử có cả ảnh nếu có selectedImageBase64)
-    HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, thongTinPhuHuynh, lopHoc, selectedImageBase64);
+    // Tạo đối tượng Học Sinh
+    HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,
+                              tencha, sdtcha, tenme, sdtme);
 
     // Thêm hoặc cập nhật
     boolean success = isEditing ? controller.capNhat(hs) : controller.Themmoi(hs);
 
     if (success) {
-    JOptionPane.showMessageDialog(this, isEditing ? "Cập nhật thành công" : "Thêm mới thành công");
-
-    // Cập nhật danh sách Cache và hiển thị lại bảng ngay lập tức
-    loadTable(); // Đảm bảo load lại từ CSDL
-    isEditing = false; // Reset trạng thái về thêm mới
-
-    lamMoi(); // Làm mới form
+        JOptionPane.showMessageDialog(this, isEditing ? "Cập nhật thành công" : "Thêm mới thành công");
+        loadTable();
+        isEditing = false;
+        lamMoi();
+    }
 }
-}
+
 private void lamMoi() {
     // Reset date picker
     if (currentDateChooser != null) {
@@ -454,27 +468,34 @@ private void lamMoi() {
 
     // Check thêm hay sửa để quyết định gen mã
     if (!isEditing) {
-        jTextField14.setText(controller.sinhMaHocSinhMoi());
+        jTextField16.setText(controller.sinhMaHocSinhMoi());
     }
-    jTextField14.setEditable(false);
+    jTextField16.setEditable(false);
 
-    // Clear các trường khác
-    jTextField15.setText("");
-    jTextField17.setText("");
-    jTextArea3.setText("");
+    // Clear các trường thông tin học sinh
+    jTextField15.setText(""); // Tên học sinh
+    jTextField17.setText(""); // Nếu là ô khác ví dụ địa chỉ (tuỳ cấu trúc của bạn)
 
-    jComboBox1.setSelectedIndex(0);
-    jComboBox3.setSelectedIndex(0);
-    jComboBox2.setSelectedIndex(0);
+    jComboBox1.setSelectedIndex(0); // Giới tính
+    jComboBox3.setSelectedIndex(0); // Trạng thái
+    jComboBox2.setSelectedIndex(0); // Lớp học
+
+    // Clear thông tin phụ huynh
+    jTextField18.setText(""); // Tên cha
+    jTextField21.setText(""); // SĐT cha
+    jTextField20.setText(""); // Tên mẹ
+    jTextField22.setText(""); // SĐT mẹ
 
     // Reset ảnh
     selectedImageBase64 = null;
     jLabel22.setIcon(null);
     jLabel23.setText("Chưa có ảnh");
 
+    // Reset ngày sinh
     setSelectedDate(null);
 
-    isEditing = false; // Reset trạng thái về thêm mới
+    // Reset trạng thái
+    isEditing = false; 
 }
 private void xoaHocSinh() {
     int selectedRow = jTable1.getSelectedRow();
@@ -531,16 +552,12 @@ private void xoaHocSinh() {
         jLabel21 = new javax.swing.JLabel();
         jLabel22 = new javax.swing.JLabel();
         jButton7 = new javax.swing.JButton();
-        jTextField14 = new javax.swing.JTextField();
         jLabel24 = new javax.swing.JLabel();
         jLabel25 = new javax.swing.JLabel();
         jTextField15 = new javax.swing.JTextField();
         jLabel26 = new javax.swing.JLabel();
         jTextField17 = new javax.swing.JTextField();
         jLabel27 = new javax.swing.JLabel();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        jTextArea3 = new javax.swing.JTextArea();
-        jLabel29 = new javax.swing.JLabel();
         jLabel30 = new javax.swing.JLabel();
         jButton8 = new javax.swing.JButton();
         jButton9 = new javax.swing.JButton();
@@ -549,6 +566,15 @@ private void xoaHocSinh() {
         jComboBox3 = new javax.swing.JComboBox<>();
         jLabel28 = new javax.swing.JLabel();
         jLabel23 = new javax.swing.JLabel();
+        jTextField16 = new javax.swing.JTextField();
+        jTextField18 = new javax.swing.JTextField();
+        jLabel32 = new javax.swing.JLabel();
+        jTextField20 = new javax.swing.JTextField();
+        jLabel33 = new javax.swing.JLabel();
+        jLabel34 = new javax.swing.JLabel();
+        jTextField21 = new javax.swing.JTextField();
+        jTextField22 = new javax.swing.JTextField();
+        jLabel35 = new javax.swing.JLabel();
 
         jTabbedPane1.setForeground(new java.awt.Color(128, 128, 128));
         jTabbedPane1.setTabLayoutPolicy(javax.swing.JTabbedPane.SCROLL_TAB_LAYOUT);
@@ -688,9 +714,6 @@ private void xoaHocSinh() {
         });
         jPanel5.add(jButton7, new org.netbeans.lib.awtextra.AbsoluteConstraints(171, 493, 115, 49));
 
-        jTextField14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jPanel5.add(jTextField14, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 120, 818, 50));
-
         jLabel24.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel24.setForeground(new java.awt.Color(128, 128, 128));
         jLabel24.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -722,24 +745,11 @@ private void xoaHocSinh() {
         jLabel27.setText("Ngày Sinh");
         jPanel5.add(jLabel27, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 270, -1, -1));
 
-        jTextArea3.setColumns(20);
-        jTextArea3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jTextArea3.setRows(5);
-        jScrollPane3.setViewportView(jTextArea3);
-
-        jPanel5.add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 390, 818, -1));
-
-        jLabel29.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel29.setForeground(new java.awt.Color(128, 128, 128));
-        jLabel29.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel29.setText("Thông tin phụ huynh");
-        jPanel5.add(jLabel29, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 360, -1, -1));
-
         jLabel30.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel30.setForeground(new java.awt.Color(128, 128, 128));
         jLabel30.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel30.setText("Mã lớp");
-        jPanel5.add(jLabel30, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 510, -1, -1));
+        jLabel30.setText("Tên Lớp");
+        jPanel5.add(jLabel30, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 360, -1, -1));
 
         jButton8.setBackground(java.awt.Color.darkGray);
         jButton8.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
@@ -764,11 +774,11 @@ private void xoaHocSinh() {
         });
         jPanel5.add(jButton9, new org.netbeans.lib.awtextra.AbsoluteConstraints(1040, 40, 130, 50));
 
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Nam", "Nữ", "Khác" }));
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Nam", "Nữ" }));
         jPanel5.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 300, 400, 50));
 
         jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Load từ Bảng LopHoc" }));
-        jPanel5.add(jComboBox2, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 540, 820, 50));
+        jPanel5.add(jComboBox2, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 390, 820, 50));
 
         jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Đang Học", "Đình Chỉ", "Chuyển Lớp" }));
         jPanel5.add(jComboBox3, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 210, 400, 50));
@@ -784,6 +794,45 @@ private void xoaHocSinh() {
         jLabel23.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel23.setText("Đã có ảnh / Chưa có ảnh !");
         jPanel5.add(jLabel23, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 550, 200, -1));
+
+        jTextField16.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jPanel5.add(jTextField16, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 120, 818, 50));
+
+        jTextField18.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jPanel5.add(jTextField18, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 480, 400, 50));
+
+        jLabel32.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel32.setForeground(new java.awt.Color(128, 128, 128));
+        jLabel32.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel32.setText("Tên Cha");
+        jPanel5.add(jLabel32, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 450, -1, -1));
+
+        jTextField20.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jPanel5.add(jTextField20, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 480, 400, 50));
+
+        jLabel33.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel33.setForeground(new java.awt.Color(128, 128, 128));
+        jLabel33.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel33.setText("Tên Mẹ");
+        jPanel5.add(jLabel33, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 450, -1, -1));
+
+        jLabel34.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel34.setForeground(new java.awt.Color(128, 128, 128));
+        jLabel34.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel34.setText("SĐT Cha");
+        jPanel5.add(jLabel34, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 540, -1, -1));
+
+        jTextField21.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jPanel5.add(jTextField21, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 570, 400, 50));
+
+        jTextField22.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jPanel5.add(jTextField22, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 570, 400, 50));
+
+        jLabel35.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel35.setForeground(new java.awt.Color(128, 128, 128));
+        jLabel35.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel35.setText("SĐT Mẹ");
+        jPanel5.add(jLabel35, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 540, -1, -1));
 
         jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 30, 1330, 720));
 
@@ -897,21 +946,26 @@ private void xoaHocSinh() {
     private javax.swing.JLabel jLabel26;
     private javax.swing.JLabel jLabel27;
     private javax.swing.JLabel jLabel28;
-    private javax.swing.JLabel jLabel29;
     private javax.swing.JLabel jLabel30;
     private javax.swing.JLabel jLabel31;
+    private javax.swing.JLabel jLabel32;
+    private javax.swing.JLabel jLabel33;
+    private javax.swing.JLabel jLabel34;
+    private javax.swing.JLabel jLabel35;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTable jTable1;
-    private javax.swing.JTextArea jTextArea3;
-    private javax.swing.JTextField jTextField14;
     private javax.swing.JTextField jTextField15;
+    private javax.swing.JTextField jTextField16;
     private javax.swing.JTextField jTextField17;
+    private javax.swing.JTextField jTextField18;
     private javax.swing.JTextField jTextField19;
+    private javax.swing.JTextField jTextField20;
+    private javax.swing.JTextField jTextField21;
+    private javax.swing.JTextField jTextField22;
     // End of variables declaration//GEN-END:variables
 }

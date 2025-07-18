@@ -8,8 +8,11 @@ public class HocSinh {
     private Date ngaySinh;         // yyyy-MM-dd
     private boolean gioiTinh;        // true=Nam, false=Nữ
     private String trangThai;        // \"Đang học\" hoặc \"Nghỉ học\"
-    private String thongTinPhuHuynh;
     private String maLop;
+    private String tenCha;
+    private String sdtCha;
+    private String tenMe;
+    private String sdtMe;
 
     public String getAnhnguoidung() {
         return Anhnguoidung;
@@ -19,15 +22,51 @@ public class HocSinh {
         this.Anhnguoidung = Anhnguoidung;
     }
 
-    public HocSinh(String maHocSinh, String hoTen, Date ngaySinh, boolean gioiTinh, String trangThai, String thongTinPhuHuynh, String maLop, String Anhnguoidung) {
-        this.maHocSinh = maHocSinh;
-        this.hoTen = hoTen;
-        this.ngaySinh = ngaySinh;
-        this.gioiTinh = gioiTinh;
-        this.trangThai = trangThai;
-        this.thongTinPhuHuynh = thongTinPhuHuynh;
-        this.maLop = maLop;
-        this.Anhnguoidung = Anhnguoidung;
+    public HocSinh(String maHocSinh, String hoTen, Date ngaySinh, boolean gioiTinh, String trangThai, String maLop, String Anhnguoidung,
+               String tenCha, String sdtCha, String tenMe, String sdtMe) {
+    this.maHocSinh = maHocSinh;
+    this.hoTen = hoTen;
+    this.ngaySinh = ngaySinh;
+    this.gioiTinh = gioiTinh;
+    this.trangThai = trangThai;
+    this.maLop = maLop;
+    this.Anhnguoidung = Anhnguoidung;
+    this.tenCha = tenCha;
+    this.sdtCha = sdtCha;
+    this.tenMe = tenMe;
+    this.sdtMe = sdtMe;
+}
+
+    public String getTenCha() {
+        return tenCha;
+    }
+
+    public void setTenCha(String tenCha) {
+        this.tenCha = tenCha;
+    }
+
+    public String getSdtCha() {
+        return sdtCha;
+    }
+
+    public void setSdtCha(String sdtCha) {
+        this.sdtCha = sdtCha;
+    }
+
+    public String getTenMe() {
+        return tenMe;
+    }
+
+    public void setTenMe(String tenMe) {
+        this.tenMe = tenMe;
+    }
+
+    public String getSdtMe() {
+        return sdtMe;
+    }
+
+    public void setSdtMe(String sdtMe) {
+        this.sdtMe = sdtMe;
     }
     private String Anhnguoidung;
 
@@ -49,8 +88,6 @@ public class HocSinh {
     public String getTrangThai() { return trangThai; }
     public void setTrangThai(String trangThai) { this.trangThai = trangThai; }
 
-    public String getThongTinPhuHuynh() { return thongTinPhuHuynh; }
-    public void setThongTinPhuHuynh(String thongTinPhuHuynh) { this.thongTinPhuHuynh = thongTinPhuHuynh; }
 
     public String getMaLop() { return maLop; }
     public void setMaLop(String maLop) { this.maLop = maLop; }

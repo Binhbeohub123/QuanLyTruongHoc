@@ -17,39 +17,50 @@ public class HocSinhDAO {
     }
 
     public List<HocSinh> selectAll() {
-        List<HocSinh> list = new ArrayList<>();
-        String sql = "SELECT * FROM HocSinh";
-        try (PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                list.add(new HocSinh(
-                    rs.getString("MaHocSinh"),
-                    rs.getString("HoTen"),
-                    rs.getDate("NgaySinh"),
-                    rs.getBoolean("GioiTinh"),
-                    rs.getString("Trang_thai"),
-                    rs.getString("ThongTinPhuHuynh"),
-                    rs.getString("MaLop"),
-                    rs.getString("Anh")
-                ));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+    List<HocSinh> list = new ArrayList<>();
+    String sql = "SELECT hs.MaHocSinh, hs.HoTen, hs.NgaySinh, hs.GioiTinh, hs.Trang_thai, hs.MaLop, hs.Anh, " +
+                 "ph.TenCha, ph.SDTCha, ph.TenMe, ph.SDTMe " +
+                 "FROM HocSinh hs " +
+                 "LEFT JOIN PhuHuynh ph ON hs.MaHocSinh = ph.MaHocSinh";
+    try (PreparedStatement ps = conn.prepareStatement(sql);
+         ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+            HocSinh hs = new HocSinh(
+                rs.getString("MaHocSinh"),
+                rs.getString("HoTen"),
+                rs.getDate("NgaySinh"),
+                rs.getBoolean("GioiTinh"),
+                rs.getString("Trang_thai"),
+                rs.getString("MaLop"),
+                rs.getString("Anh"),
+                rs.getString("TenCha"),
+                rs.getString("SDTCha"),
+                rs.getString("TenMe"),
+                rs.getString("SDTMe")
+            );
+            list.add(hs);
         }
-        return list;
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+    return list;
+}
 
     public boolean insert(HocSinh hs) {
-    String sql = "INSERT INTO HocSinh (MaHocSinh, HoTen, NgaySinh, GioiTinh, Trang_thai, ThongTinPhuHuynh, MaLop, Anh) VALUES (?,?,?,?,?,?,?,?)";
+    String sql = "INSERT INTO HocSinh (MaHocSinh, HoTen, NgaySinh, GioiTinh, Trang_thai, MaLop, Anh, TenCha, SDTCha, TenMe, SDTMe) "
+               + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setString(1, hs.getMaHocSinh());
         ps.setString(2, hs.getHoTen());
         ps.setDate(3, new java.sql.Date(hs.getNgaySinh().getTime()));
         ps.setBoolean(4, hs.isGioiTinh());
         ps.setString(5, hs.getTrangThai());
-        ps.setString(6, hs.getThongTinPhuHuynh());
         ps.setString(7, hs.getMaLop());
-        ps.setString(8, hs.getAnhnguoidung()); // Lưu ảnh Base64
+        ps.setString(8, hs.getAnhnguoidung());
+        ps.setString(9, hs.getTenCha());
+        ps.setString(10, hs.getSdtCha());
+        ps.setString(11, hs.getTenMe());
+        ps.setString(12, hs.getSdtMe());
         return ps.executeUpdate() > 0;
     } catch (SQLException e) {
         e.printStackTrace();
@@ -58,16 +69,20 @@ public class HocSinhDAO {
 }
 
     public boolean update(HocSinh hs) {
-    String sql = "UPDATE HocSinh SET HoTen=?, NgaySinh=?, GioiTinh=?, Trang_thai=?, ThongTinPhuHuynh=?, MaLop=?, Anh=? WHERE MaHocSinh=?";
+    String sql = "UPDATE HocSinh SET HoTen=?, NgaySinh=?, GioiTinh=?, Trang_thai=?, MaLop=?, Anh=?, "
+               + "TenCha=?, SDTCha=?, TenMe=?, SDTMe=? WHERE MaHocSinh=?";
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setString(1, hs.getHoTen());
         ps.setDate(2, new java.sql.Date(hs.getNgaySinh().getTime()));
         ps.setBoolean(3, hs.isGioiTinh());
         ps.setString(4, hs.getTrangThai());
-        ps.setString(5, hs.getThongTinPhuHuynh());
         ps.setString(6, hs.getMaLop());
-        ps.setString(7, hs.getAnhnguoidung()); // Lưu ảnh Base64
-        ps.setString(8, hs.getMaHocSinh());
+        ps.setString(7, hs.getAnhnguoidung());
+        ps.setString(8, hs.getTenCha());
+        ps.setString(9, hs.getSdtCha());
+        ps.setString(10, hs.getTenMe());
+        ps.setString(11, hs.getSdtMe());
+        ps.setString(12, hs.getMaHocSinh());
         return ps.executeUpdate() > 0;
     } catch (SQLException e) {
         e.printStackTrace();
@@ -112,35 +127,36 @@ public class HocSinhDAO {
     }
 }
     public List<HocSinh> search(String keyword) {
-        List<HocSinh> list = new ArrayList<>();
-        String sql = "SELECT * FROM HocSinh "
-                   + "WHERE MaHocSinh LIKE ? "
-                   + "   OR HoTen      LIKE ? "
-                   + "   OR MaLop      LIKE ?";
-        String like = "%" + keyword + "%";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, like);
-            ps.setString(2, like);
-            ps.setString(3, like);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new HocSinh(
-                        rs.getString("MaHocSinh"),
-                        rs.getString("HoTen"),
-                        rs.getDate("NgaySinh"),
-                        rs.getBoolean("GioiTinh"),
-                        rs.getString("Trang_thai"),
-                        rs.getString("ThongTinPhuHuynh"),
-                        rs.getString("MaLop"),
-                        rs.getString("Anh")
-                    ));
-                }
+    List<HocSinh> list = new ArrayList<>();
+    String sql = "SELECT * FROM HocSinh WHERE MaHocSinh LIKE ? OR HoTen LIKE ? OR MaLop LIKE ?";
+    String like = "%" + keyword + "%";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, like);
+        ps.setString(2, like);
+        ps.setString(3, like);
+        try (ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                HocSinh hs = new HocSinh(
+                    rs.getString("MaHocSinh"),
+                    rs.getString("HoTen"),
+                    rs.getDate("NgaySinh"),
+                    rs.getBoolean("GioiTinh"),
+                    rs.getString("Trang_thai"),
+                    rs.getString("MaLop"),
+                    rs.getString("Anh"),
+                    rs.getString("TenCha"),
+                    rs.getString("SDTCha"),
+                    rs.getString("TenMe"),
+                    rs.getString("SDTMe")
+                );
+                list.add(hs);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-        return list;
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+    return list;
+}
     public List<String> selectAllMaLop() {
         List<String> ds = new ArrayList<>();
         String sql = "SELECT MaLop FROM LopHoc";
