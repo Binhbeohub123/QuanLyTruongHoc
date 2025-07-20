@@ -76,6 +76,7 @@ public class QuanLyNguoiDung_View extends javax.swing.JPanel {
         for (VaiTro vt : listVaiTro) {
         jComboBox2.addItem(vt.getMaVaiTro()); // ComboBox sẽ hiển thị Ten_vai_tro do toString() override
     }
+        currentDateChooser.setDate(new Date());
         khoaTable(jTable1);
         jTextField19.putClientProperty("JTextField.placeholderText", "Tìm kiếm giáo viên ....");
         jTextField19.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -953,6 +954,7 @@ if (!diaChi.matches("^[\\p{L}0-9\\s,\\.\\-\\/]+$")) {
         jTextField20.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jPanel5.add(jTextField20, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 210, 400, 50));
 
+        jComboBox1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Nam", "Nữ", "Khác" }));
         jPanel5.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 300, 400, 50));
 
@@ -962,6 +964,7 @@ if (!diaChi.matches("^[\\p{L}0-9\\s,\\.\\-\\/]+$")) {
         jLabel32.setText("Số Điện Thoại");
         jPanel5.add(jLabel32, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 360, -1, -1));
 
+        jComboBox2.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "GVCN", "BGH" }));
         jPanel5.add(jComboBox2, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 480, 400, 50));
 
@@ -980,6 +983,7 @@ if (!diaChi.matches("^[\\p{L}0-9\\s,\\.\\-\\/]+$")) {
         jLabel34.setText("Vai trò");
         jPanel5.add(jLabel34, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 450, -1, -1));
 
+        jComboBox3.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Load từ Bảng Môn Học" }));
         jPanel5.add(jComboBox3, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 390, 400, 50));
 
@@ -989,9 +993,11 @@ if (!diaChi.matches("^[\\p{L}0-9\\s,\\.\\-\\/]+$")) {
         jLabel30.setText("Mật Khẩu");
         jPanel5.add(jLabel30, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 180, -1, -1));
 
+        jPasswordField1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jPasswordField1.setText("jPasswordField1");
         jPanel5.add(jPasswordField1, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 210, 400, 50));
 
+        jComboBox4.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox4.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Hoạt Động", "Bị Khóa" }));
         jPanel5.add(jComboBox4, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 120, 400, 50));
 

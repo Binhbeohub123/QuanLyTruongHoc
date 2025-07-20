@@ -72,6 +72,7 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
         tableModel = new DefaultTableModel(columnNames, 0);
         jTable1.setModel(tableModel);
         loadTable();
+        currentDateChooser.setDate(new Date());
         jTextField19.putClientProperty("JTextField.placeholderText", "Tìm Kiếm Học Sinh ....");
         khoaTable(jTable1);
         jTextField19.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -177,6 +178,7 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
         });
     }
 }
+
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {
     int selectedRow = jTable1.getSelectedRow();
     if (selectedRow >= 0) {
@@ -370,7 +372,17 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     if (currentDateChooser != null) {
         currentDateChooser.setDate(date);
     }
+
+    if (jTextField17 instanceof JFormattedTextField) {
+        if (date != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            String formattedDate = sdf.format(date);
+            jTextField17.setText(formattedDate);
+        } else {
+            jTextField17.setText("");
+        }
     }
+}
     private void timKiemHocSinh() {
     String keyword = jTextField19.getText().trim();
     TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
@@ -393,6 +405,7 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
     String sdtme = jTextField22.getText().trim();
     String lopHoc = jComboBox2.getSelectedItem().toString();
 
+    
     Date ngaySinh = getCurrentDateFromField();
     if (ngaySinh == null) {
         JOptionPane.showMessageDialog(this, "Vui lòng nhập ngày sinh hợp lệ", "Lỗi", JOptionPane.WARNING_MESSAGE);
@@ -425,6 +438,24 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
         JOptionPane.showMessageDialog(this, "Tên học sinh không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
         return;
     }
+    if (!tencha.isEmpty() && !tencha.matches("^[\\p{L}\\s\\-\\.]+$")) {
+    JOptionPane.showMessageDialog(this, "Tên cha không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    return;
+}
+
+if (!tenme.isEmpty() && !tenme.matches("^[\\p{L}\\s\\-\\.]+$")) {
+    JOptionPane.showMessageDialog(this, "Tên mẹ không được chứa ký tự đặc biệt!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    return;
+}
+if (!sdtcha.isEmpty() && !sdtcha.matches("^0[0-9]{9}$")) {
+    JOptionPane.showMessageDialog(this, "Số điện thoại cha phải đủ 10 số và bắt đầu bằng 0!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    return;
+}
+
+if (!sdtme.isEmpty() && !sdtme.matches("^0[0-9]{9}$")) {
+    JOptionPane.showMessageDialog(this, "Số điện thoại mẹ phải đủ 10 số và bắt đầu bằng 0!", "Lỗi", JOptionPane.WARNING_MESSAGE);
+    return;
+}
 
     // Check trùng tên
     if (!isEditing) {
@@ -438,20 +469,22 @@ private Vector<String> getColumnNames(DefaultTableModel model) {
             return;
         }
     }
+    
 
     // Tạo đối tượng Học Sinh
-    HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,
-                              tencha, sdtcha, tenme, sdtme);
+    HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,tencha, sdtcha, tenme, sdtme);
 
-    // Thêm hoặc cập nhật
-    boolean success = isEditing ? controller.capNhat(hs) : controller.Themmoi(hs);
+ 
+    if (isEditing) {
+    controller.capNhat(hs);
+    JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+} else {
+    controller.Themmoi(hs);
+    JOptionPane.showMessageDialog(this, "Thêm mới thành công!");
+}
 
-    if (success) {
-        JOptionPane.showMessageDialog(this, isEditing ? "Cập nhật thành công" : "Thêm mới thành công");
-        loadTable();
-        isEditing = false;
-        lamMoi();
-    }
+lamMoi();        // reset form
+loadTable(); 
 }
 
 private void lamMoi() {
@@ -465,11 +498,7 @@ private void lamMoi() {
     // Gán tiêu đề
     jLabel21.setText("Thêm Học Sinh Mới");
     setupDateField();
-
-    // Check thêm hay sửa để quyết định gen mã
-    if (!isEditing) {
-        jTextField16.setText(controller.sinhMaHocSinhMoi());
-    }
+    jTextField16.setText(controller.sinhMaHocSinhMoi());
     jTextField16.setEditable(false);
 
     // Clear các trường thông tin học sinh
@@ -780,7 +809,7 @@ private void xoaHocSinh() {
         jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Load từ Bảng LopHoc" }));
         jPanel5.add(jComboBox2, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 390, 820, 50));
 
-        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Đang Học", "Đình Chỉ", "Chuyển Lớp" }));
+        jComboBox3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Đang Học", "Đình Chỉ", "Chuyển Lớp", "Kết Thúc" }));
         jPanel5.add(jComboBox3, new org.netbeans.lib.awtextra.AbsoluteConstraints(890, 210, 400, 50));
 
         jLabel28.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
