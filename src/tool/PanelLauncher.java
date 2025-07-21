@@ -52,8 +52,8 @@ public class PanelLauncher {
     javax.swing.SwingUtilities.invokeLater(() -> {
         // Tạo instance của panel bạn muốn hiển thị
         //QuanLyInAnBaoCao_View panel = new QuanLyInAnBaoCao_View();
-        QuanLyNguoiDung_View panel = new QuanLyNguoiDung_View();
-        //QuanLyHocSinh_View panel = new QuanLyHocSinh_View();
+        //QuanLyNguoiDung_View panel = new QuanLyNguoiDung_View();
+        QuanLyHocSinh_View panel = new QuanLyHocSinh_View();
         // Hiển thị với tiêu đề
         showPanel(panel, "Quản Lý Học Sinh");
     });

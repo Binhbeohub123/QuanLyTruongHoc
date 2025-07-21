@@ -73,8 +73,8 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
         jTable1.setModel(tableModel);
         loadTable();
         currentDateChooser.setDate(new Date());
-        jTextField19.putClientProperty("JTextField.placeholderText", "Tìm Kiếm Học Sinh ....");
         khoaTable(jTable1);
+        jTextField19.putClientProperty("JTextField.placeholderText", "Tìm Kiếm Học Sinh ....");
         jTextField19.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
     @Override
     public void insertUpdate(javax.swing.event.DocumentEvent e) {
@@ -91,7 +91,7 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
     }
 });
     }
-    private void khoaTable(JTable table) {
+     private void khoaTable(JTable table) {
     // Khóa chỉnh sửa cell
     if (table.getModel() instanceof DefaultTableModel) {
         DefaultTableModel model = (DefaultTableModel) table.getModel();
@@ -109,13 +109,14 @@ public class QuanLyHocSinh_View extends javax.swing.JPanel {
 }
 
 // Hàm lấy tên cột từ DefaultTableModel
+
 private Vector<String> getColumnNames(DefaultTableModel model) {
     Vector<String> columnNames = new Vector<>();
     for (int i = 0; i < model.getColumnCount(); i++) {
         columnNames.add(model.getColumnName(i));
     }
     return columnNames;
-}  
+}
      private int tinhTuoi(Date ngaySinh) {
     Calendar birth = Calendar.getInstance();
     birth.setTime(ngaySinh);
@@ -456,6 +457,15 @@ if (!sdtme.isEmpty() && !sdtme.matches("^0[0-9]{9}$")) {
     JOptionPane.showMessageDialog(this, "Số điện thoại mẹ phải đủ 10 số và bắt đầu bằng 0!", "Lỗi", JOptionPane.WARNING_MESSAGE);
     return;
 }
+if (sdtcha != null && sdtcha.equals(sdtme)) {
+    JOptionPane.showMessageDialog(
+        this,
+        "Số điện thoại cha và mẹ không được trùng với nhau",
+        "Lỗi",
+        JOptionPane.WARNING_MESSAGE
+    );
+    return;
+}
 
     // Tạo đối tượng Học Sinh
     HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,tencha, sdtcha, tenme, sdtme);
@@ -464,15 +474,21 @@ if (!sdtme.isEmpty() && !sdtme.matches("^0[0-9]{9}$")) {
     if (isEditing) {
     controller.capNhat(hs);
     JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+    
 } else {
     controller.Themmoi(hs);
-    JOptionPane.showMessageDialog(this, "Thêm mới thành công!");
+JOptionPane.showMessageDialog(this, "Thêm mới thành công!");
+    }
+    lamMoi();
+    loadTable();
+    
+    jTable1.setModel(tableModel);   // đảm bảo jTable1 đang xài đúng tableModel vừa load
+    khoaTable(jTable1);  
 }
-loadTable(); 
-lamMoi();        // reset form
-}
+    
 
 private void lamMoi() {
+    isEditing = false; 
     // Reset date picker
     if (currentDateChooser != null) {
         jPanel5.remove(currentDateChooser);
@@ -490,16 +506,20 @@ private void lamMoi() {
     jTextField15.setText(""); // Tên học sinh
     jTextField17.setText(""); // Nếu là ô khác ví dụ địa chỉ (tuỳ cấu trúc của bạn)
 
-    jComboBox1.setSelectedIndex(0); // Giới tính
-    jComboBox3.setSelectedIndex(0); // Trạng thái
-    jComboBox2.setSelectedIndex(0); // Lớp học
+    jComboBox1.setSelectedIndex(0);
+    jComboBox2.setSelectedIndex(0);
+    jComboBox3.setSelectedIndex(0);
+     // Lớp học
 
     // Clear thông tin phụ huynh
     jTextField18.setText(""); // Tên cha
     jTextField21.setText(""); // SĐT cha
     jTextField20.setText(""); // Tên mẹ
     jTextField22.setText(""); // SĐT mẹ
-
+    
+    if (jTable1.getRowSorter() != null) {
+        jTable1.setRowSorter(null);
+    }
     // Reset ảnh
     selectedImageBase64 = null;
     jLabel22.setIcon(null);
@@ -509,7 +529,6 @@ private void lamMoi() {
     setSelectedDate(null);
 
     // Reset trạng thái
-    isEditing = false; 
 }
 private void xoaHocSinh() {
     int selectedRow = jTable1.getSelectedRow();
