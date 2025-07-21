@@ -214,19 +214,19 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     // In Cơ sở vật chất
     if (jCheckBox3.isSelected() || jCheckBox5.isSelected()) {
     sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT");
-    if (jCheckBox3.isSelected()) {
+    if (jCheckBox5.isSelected()) {
         sb.append(" - Theo Lớp ").append(maLop);
-    } else {
+    } else if(jCheckBox3.isSelected()) {
         sb.append(" - Toàn Trường");
     }
     sb.append("\n---------------------------------------------------\n");
 
-    List<Object[]> dsTS;
-    if (jCheckBox3.isSelected()) {
+    List<Object[]> dsTS = null;
+    if (jCheckBox5.isSelected()) {
         dsTS = dao.loadCoSoVatChatTheoLop(maLop);
-    } else {
+    } else if(jCheckBox3.isSelected()) {
         dsTS = dao.loadTatCaCoSoVatChat();
-    }
+    } 
 
     if (dsTS.isEmpty()) {
         sb.append("Không có dữ liệu tài sản.\n");

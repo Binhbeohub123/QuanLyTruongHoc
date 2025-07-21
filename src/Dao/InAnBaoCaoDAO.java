@@ -272,5 +272,30 @@ public List<Object[]> loadCoSoVatChatTheoLop(String maPhongHoc) {
         e.printStackTrace();
     }
     return list;
+
+    
 }
+public static void main(String[] args) {
+        String maphonghoc = "PHG001";
+        InAnBaoCaoDAO dao = new InAnBaoCaoDAO();
+        List<Object[]> danhSachCSVatChat = dao.loadCoSoVatChatTheoLop(maphonghoc);
+
+        if (danhSachCSVatChat.isEmpty()) {
+            System.out.println("Không có dữ liệu cơ sở vật chất.");
+        } else {
+            System.out.println("Dữ liệu Cơ sở vật chất:");
+            for (Object[] row : danhSachCSVatChat) {
+                System.out.println("==================================");
+                System.out.println("Mã Tài Sản: " + row[0]);
+                System.out.println("Tên Tài Sản: " + row[1]);
+                System.out.println("Loại Tài Sản: " + row[2]);
+                System.out.println("Tình Trạng: " + row[3]);
+                System.out.println("Ngày Nhập: " + row[4]);
+                System.out.println("Mã Phòng Học: " + row[5]);
+                System.out.println("ID: " + row[6]);
+                System.out.println("Mã Loại TS: " + row[7]);
+            }
+        }
+
+    }
 }
