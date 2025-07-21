@@ -17,10 +17,19 @@ import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 import Dao.InAnBaoCaoDAO;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Vector;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -100,60 +109,295 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
             return null;
     }
 }
-     public void xemTruocInAn() {
-    if (!jCheckBox2.isSelected()) {
-        JOptionPane.showMessageDialog(this, "Vui lòng chọn 'In Bảng Điểm Cả Lớp' để xem trước!");
-        return;
-    }
-
+     private boolean isAnyReportSelected() {
+    return jCheckBox1.isSelected() || 
+           jCheckBox2.isSelected() || 
+           jCheckBox3.isSelected() || 
+           jCheckBox4.isSelected() || 
+           jCheckBox5.isSelected();
+}
+    public void inBaoCao(boolean chiXemTruoc) {
     String maLop = getSelectedMaLop();
     String hocKy = getHocKyDaChon();
     List<String> dsMaHocSinh = getDanhSachMaHocSinhTrenTable();
+    List<String> dsMaHocSinhChon = getDanhSachHocSinhDuocChon();
+
+    if (!isAnyReportSelected()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn ít nhất 1 loại báo cáo!");
+        return;
+    }
+
+    // Kiểm tra riêng cho từng loại báo cáo (không bắt buộc lớp cho Cơ Sở Vật Chất)
+    if ((jCheckBox1.isSelected() || jCheckBox2.isSelected() || jCheckBox4.isSelected()) && maLop == null) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn lớp!");
+        return;
+    }
+
+    if ((jCheckBox2.isSelected() || jCheckBox4.isSelected()) && hocKy == null) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn học kỳ!");
+        return;
+    }
+
+    if (jCheckBox2.isSelected() && dsMaHocSinh.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Danh sách học sinh đang trống!");
+        return;
+    }
+
+    if (jCheckBox4.isSelected() && dsMaHocSinhChon.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn học sinh trên bảng để in bảng điểm cá nhân!");
+        return;
+    }
+
+    StringBuilder sb = new StringBuilder();
+
+    // In Sĩ số lớp
+    if (jCheckBox1.isSelected()) {
+        sb.append("DANH SÁCH SĨ SỐ LỚP ").append(maLop).append("\n");
+        sb.append("---------------------------------------------------\n");
+        List<Object[]> dsSiSo = dao.loadSiSoLop(maLop);
+        for (Object[] row : dsSiSo) {
+            sb.append("Mã HS: ").append(row[0])
+              .append(" | Họ Tên: ").append(row[1])
+              .append(" | Ngày Sinh: ").append(row[2])
+              .append(" | Giới Tính: ").append(row[3])
+              .append(" | Trạng Thái: ").append(row[4]).append("\n");
+        }
+        sb.append("\n");
+    }
+
+    // In Bảng điểm lớp
+    if (jCheckBox2.isSelected()) {
+        sb.append("BẢNG ĐIỂM LỚP ").append(maLop).append(" - ").append(hocKy).append("\n");
+        sb.append("---------------------------------------------------\n");
+        List<Object[]> dsBangDiem = dao.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
+        if (dsBangDiem.isEmpty()) {
+            sb.append("Không tìm thấy bảng điểm cho danh sách đã chọn.\n");
+        } else {
+            for (Object[] row : dsBangDiem) {
+                sb.append("HS: ").append(row[0])
+                  .append(" | Môn: ").append(row[1])
+                  .append(" | 45P: ").append(row[2])
+                  .append(" | Giữa Kỳ: ").append(row[3])
+                  .append(" | Cuối Kỳ: ").append(row[4])
+                  .append(" | TB: ").append(String.format("%.2f", row[5]))
+                  .append(" | Học Lực: ").append(row[6])
+                  .append(" | Mô Tả: ").append(row[7]).append("\n");
+            }
+        }
+        sb.append("\n");
+    }
+
+    // In Bảng điểm cá nhân
+    if (jCheckBox4.isSelected()) {
+        sb.append("BẢNG ĐIỂM CÁ NHÂN\n");
+        sb.append("---------------------------------------------------\n");
+        for (String maHS : dsMaHocSinhChon) {
+            sb.append("Mã HS: ").append(maHS).append("\n");
+            List<Object[]> dsDiemCaNhan = dao.loadBangDiemCaNhan(maHS, hocKy);
+            if (dsDiemCaNhan.isEmpty()) {
+                sb.append("Không có dữ liệu.\n");
+            } else {
+                for (Object[] row : dsDiemCaNhan) {
+                    sb.append("Môn: ").append(row[0])
+                      .append(" | 45P: ").append(row[1])
+                      .append(" | Giữa Kỳ: ").append(row[2])
+                      .append(" | Cuối Kỳ: ").append(row[3])
+                      .append(" | TB: ").append(String.format("%.2f", row[4]))
+                      .append(" | Học Lực: ").append(row[5])
+                      .append(" | Mô Tả: ").append(row[6]).append("\n");
+                }
+            }
+            sb.append("\n");
+        }
+    }
+
+    // In Cơ sở vật chất
+    if (jCheckBox3.isSelected() || jCheckBox5.isSelected()) {
+    sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT");
+    if (jCheckBox3.isSelected()) {
+        sb.append(" - Theo Lớp ").append(maLop);
+    } else {
+        sb.append(" - Toàn Trường");
+    }
+    sb.append("\n---------------------------------------------------\n");
+
+    List<Object[]> dsTS;
+    if (jCheckBox3.isSelected()) {
+        dsTS = dao.loadCoSoVatChatTheoLop(maLop);
+    } else {
+        dsTS = dao.loadTatCaCoSoVatChat();
+    }
+
+    if (dsTS.isEmpty()) {
+        sb.append("Không có dữ liệu tài sản.\n");
+    } else {
+        for (Object[] row : dsTS) {
+            sb.append("Mã TS: ").append(row[0])
+              .append(" | Tên TS: ").append(row[1])
+              .append(" | Loại: ").append(row[2])
+              .append(" | Tình Trạng: ").append(row[3])
+              .append(" | Ngày Nhập: ").append(row[4])
+              .append(" | Phòng: ").append(row[5]).append("\n");
+        }
+    }
+    sb.append("\n");
+}
+
+    // Hiển thị hoặc xuất file
+    if (chiXemTruoc) {
+        jTextArea2.setText(sb.toString());
+    } else {
+        exportToFile(sb.toString());
+    }
+}
+     public void xemTruocBaoCao() {
+    String maLop = getSelectedMaLop();
+    String hocKy = getHocKyDaChon();
+    List<String> dsMaHocSinh = getDanhSachMaHocSinhTrenTable();
+    List<String> dsMaHocSinhChon = getDanhSachHocSinhDuocChon();
 
     if (maLop == null || hocKy == null || dsMaHocSinh.isEmpty()) {
         JOptionPane.showMessageDialog(this, "Vui lòng chọn lớp, học kỳ và danh sách học sinh đầy đủ!");
         return;
     }
 
-    List<Object[]> dsBangDiem = dao.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
-
-    if (dsBangDiem.isEmpty()) {
-        jTextArea2.setText("Không tìm thấy bảng điểm cho danh sách đã chọn.");
+    if (!jCheckBox1.isSelected() && !jCheckBox2.isSelected() && !jCheckBox4.isSelected()) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn ít nhất 1 loại báo cáo để xem trước!");
         return;
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append("BẢNG ĐIỂM LỚP ").append(maLop).append(" - ").append(hocKy).append("\n");
+
+    // In Sĩ Số Lớp
+    if (jCheckBox1.isSelected()) {
+        sb.append("DANH SÁCH SĨ SỐ LỚP ").append(maLop).append("\n");
+        sb.append("---------------------------------------------------\n");
+
+        List<Object[]> dsSiSo = dao.loadSiSoLop(maLop);
+        for (Object[] row : dsSiSo) {
+            sb.append("Mã HS: ").append(row[0])
+              .append(" | Họ Tên: ").append(row[1])
+              .append(" | Ngày Sinh: ").append(row[2])
+              .append(" | Giới Tính: ").append(row[3])
+              .append(" | Trạng Thái: ").append(row[4])
+              .append("\n");
+        }
+        sb.append("\n");
+    }
+
+    // In Bảng Điểm Cả Lớp
+    if (jCheckBox2.isSelected()) {
+        sb.append("BẢNG ĐIỂM LỚP ").append(maLop).append(" - ").append(hocKy).append("\n");
+        sb.append("---------------------------------------------------\n");
+
+        List<Object[]> dsBangDiem = dao.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
+        if (dsBangDiem.isEmpty()) {
+            sb.append("Không tìm thấy bảng điểm cho danh sách đã chọn.\n");
+        } else {
+            for (Object[] row : dsBangDiem) {
+                sb.append("HS: ").append(row[0])
+                  .append(" | Môn: ").append(row[1])
+                  .append(" | 45P: ").append(row[2])
+                  .append(" | Giữa Kỳ: ").append(row[3])
+                  .append(" | Cuối Kỳ: ").append(row[4])
+                  .append(" | TB: ").append(String.format("%.2f", row[5]))
+                  .append(" | Học Lực: ").append(row[6])
+                  .append(" | Mô Tả: ").append(row[7])
+                  .append("\n");
+            }
+        }
+        sb.append("\n");
+    }
+
+    // In Bảng Điểm Cá Nhân
+    if (jCheckBox4.isSelected()) {
+        if (dsMaHocSinhChon.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn học sinh trên bảng để in bảng điểm cá nhân!");
+            return;
+        }
+
+        sb.append("BẢNG ĐIỂM CÁ NHÂN\n");
+        sb.append("---------------------------------------------------\n");
+
+        for (String maHS : dsMaHocSinhChon) {
+            List<Object[]> dsDiemCaNhan = dao.loadBangDiemCaNhan(maHS, hocKy);
+            sb.append("Mã HS: ").append(maHS).append("\n");
+
+            if (dsDiemCaNhan.isEmpty()) {
+                sb.append("Không có dữ liệu.\n");
+            } else {
+                for (Object[] row : dsDiemCaNhan) {
+                    sb.append("Môn: ").append(row[0])
+                      .append(" | 45P: ").append(row[1])
+                      .append(" | Giữa Kỳ: ").append(row[2])
+                      .append(" | Cuối Kỳ: ").append(row[3])
+                      .append(" | TB: ").append(String.format("%.2f", row[4]))
+                      .append(" | Học Lực: ").append(row[5])
+                      .append(" | Mô Tả: ").append(row[6])
+                      .append("\n");
+                }
+            }
+            sb.append("\n");
+        }
+    }
+    if (jCheckBox3.isSelected()) {
+    sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT").append(maLop != null ? " - Lớp " + maLop : "").append("\n");
     sb.append("---------------------------------------------------\n");
 
-    for (Object[] row : dsBangDiem) {
-        String maHS = (String) row[0];
-        String maMon = (String) row[1];
-        float diem = (Float) row[2];
-        int heSo = (Integer) row[3];
-        float d45p = (Float) row[4];
-        float dGK = (Float) row[5];
-        float dCK = (Float) row[6];
-        float dtb = (Float) row[7];
-        String hocLuc = (String) row[8];
-        String moTa = (String) row[9];
+    List<Object[]> dsTS;
 
-        sb.append("HS: ").append(maHS)
-          .append(" | Môn: ").append(maMon)
-          .append(" | Điểm: ").append(diem)
-          .append(" | Hệ Số: ").append(heSo)
-          .append(" | 45P: ").append(d45p)
-          .append(" | GK: ").append(dGK)
-          .append(" | CK: ").append(dCK)
-          .append(" | TB: ").append(String.format("%.2f", dtb))
-          .append(" | Học Lực: ").append(hocLuc)
-          .append(" | Mô Tả: ").append(moTa)
-          .append("\n");
+    // Nếu đã chọn lớp thì in theo lớp, không thì in toàn bộ
+    if (maLop != null) {
+        dsTS = dao.loadCoSoVatChatTheoLop(maLop);
+    } else {
+        dsTS = dao.loadTatCaCoSoVatChat();
     }
+
+    if (dsTS.isEmpty()) {
+        sb.append("Không có dữ liệu tài sản.\n");
+    } else {
+        for (Object[] row : dsTS) {
+            sb.append("Mã TS: ").append(row[0])
+              .append(" | Tên TS: ").append(row[1])
+              .append(" | Loại: ").append(row[2])
+              .append(" | Tình Trạng: ").append(row[3])
+              .append(" | Ngày Nhập: ").append(row[4])
+              .append(" | Phòng: ").append(row[5])
+              .append("\n");
+        }
+    }
+
+    sb.append("\n");
+}
 
     jTextArea2.setText(sb.toString());
 }
     
+     public void exportToFile(String content) {
+    JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Chọn thư mục để lưu file");
+    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+    if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+        File folder = chooser.getSelectedFile();
+        String fileName = "BaoCao_" + LocalDate.now() + ".csv";
+        File file = new File(folder, fileName);
+
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            byte[] bom = {(byte)0xEF, (byte)0xBB, (byte)0xBF};
+            fos.write(bom);
+            try (OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+                 BufferedWriter bw = new BufferedWriter(osw)) {
+                bw.write(content);
+            }
+            JOptionPane.showMessageDialog(this, "Đã in thành công tại: \n" + file.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Lỗi khi in file!");
+        }
+    }
+}
+
     private void initializeForm() { 
         setupPanelStyling();
     }
@@ -225,6 +469,17 @@ private void resetTable() {
     DefaultTableModel model = new DefaultTableModel(columnNames, 0); // 0 dòng trống
     jTable1.setModel(model);
 }
+public List<String> getDanhSachHocSinhDuocChon() {
+    List<String> dsMaHocSinh = new ArrayList<>();
+    int[] selectedRows = jTable1.getSelectedRows();
+
+    for (int row : selectedRows) {
+        String maHS = (String) jTable1.getValueAt(row, 0); // Cột 0 là Mã HS
+        dsMaHocSinh.add(maHS);
+    }
+
+    return dsMaHocSinh;
+}
     
 
     /**
@@ -243,6 +498,7 @@ private void resetTable() {
         jCheckBox2 = new javax.swing.JCheckBox();
         jCheckBox3 = new javax.swing.JCheckBox();
         jCheckBox4 = new javax.swing.JCheckBox();
+        jCheckBox5 = new javax.swing.JCheckBox();
         jButton12 = new javax.swing.JButton();
         jButton13 = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
@@ -281,18 +537,28 @@ private void resetTable() {
 
         jCheckBox3.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jCheckBox3.setForeground(java.awt.Color.darkGray);
-        jCheckBox3.setText("Danh Sách Cơ Sở Vật Chất");
+        jCheckBox3.setText("Danh Sách Cơ Sở Vật Chất Toàn Bộ");
         jCheckBox3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jCheckBox3ActionPerformed(evt);
             }
         });
-        jPanel2.add(jCheckBox3, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 160, 210, -1));
+        jPanel2.add(jCheckBox3, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 310, 290, -1));
 
         jCheckBox4.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         jCheckBox4.setForeground(java.awt.Color.darkGray);
         jCheckBox4.setText("In Bảng Điểm Cá Nhân");
         jPanel2.add(jCheckBox4, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 110, 180, -1));
+
+        jCheckBox5.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jCheckBox5.setForeground(java.awt.Color.darkGray);
+        jCheckBox5.setText("Danh Sách Cơ Sở Vật Chất Theo Lớp");
+        jCheckBox5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jCheckBox5ActionPerformed(evt);
+            }
+        });
+        jPanel2.add(jCheckBox5, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 160, 290, -1));
 
         jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, 370, 640));
 
@@ -321,6 +587,11 @@ private void resetTable() {
         jButton13.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jButton13MouseClicked(evt);
+            }
+        });
+        jButton13.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton13ActionPerformed(evt);
             }
         });
         jPanel1.add(jButton13, new org.netbeans.lib.awtextra.AbsoluteConstraints(1090, 630, 130, 50));
@@ -427,8 +698,17 @@ private void resetTable() {
 
     private void jButton12ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton12ActionPerformed
         // TODO add your handling code here:
-        xemTruocInAn();
+        inBaoCao(true);
     }//GEN-LAST:event_jButton12ActionPerformed
+
+    private void jButton13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton13ActionPerformed
+        // TODO add your handling code here:
+        inBaoCao(false);
+    }//GEN-LAST:event_jButton13ActionPerformed
+
+    private void jCheckBox5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox5ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jCheckBox5ActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -438,6 +718,7 @@ private void resetTable() {
     private javax.swing.JCheckBox jCheckBox2;
     private javax.swing.JCheckBox jCheckBox3;
     private javax.swing.JCheckBox jCheckBox4;
+    private javax.swing.JCheckBox jCheckBox5;
     private javax.swing.JComboBox<String> jComboBox13;
     private javax.swing.JComboBox<String> jComboBox14;
     private javax.swing.JComboBox<String> jComboBox15;

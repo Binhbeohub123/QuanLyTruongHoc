@@ -457,20 +457,6 @@ if (!sdtme.isEmpty() && !sdtme.matches("^0[0-9]{9}$")) {
     return;
 }
 
-    // Check trùng tên
-    if (!isEditing) {
-        if (controller.kiemTraTrungTenHocSinh(ten)) {
-            JOptionPane.showMessageDialog(this, "Tên học sinh đã tồn tại", "Lỗi", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-    } else {
-        if (controller.kiemTraTrungTenHocSinhKhiCapNhat(ten, maHS)) {
-            JOptionPane.showMessageDialog(this, "Tên học sinh đã tồn tại", "Lỗi", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-    }
-    
-
     // Tạo đối tượng Học Sinh
     HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,tencha, sdtcha, tenme, sdtme);
 
@@ -482,9 +468,8 @@ if (!sdtme.isEmpty() && !sdtme.matches("^0[0-9]{9}$")) {
     controller.Themmoi(hs);
     JOptionPane.showMessageDialog(this, "Thêm mới thành công!");
 }
-
-lamMoi();        // reset form
 loadTable(); 
+lamMoi();        // reset form
 }
 
 private void lamMoi() {
