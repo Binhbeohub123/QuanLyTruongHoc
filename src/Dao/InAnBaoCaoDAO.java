@@ -244,58 +244,47 @@ public List<Object[]> loadTatCaCoSoVatChat() {
     }
     return list;
 }
-public List<Object[]> loadCoSoVatChatTheoLop(String maPhongHoc) {
+public List<Object[]> getCSVCTheoLop(String maLop) {
     List<Object[]> list = new ArrayList<>();
+
     try {
-        String sql = "SELECT * FROM CoSoVatChat WHERE Ma_Phong_hoc = ?";
-        PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setString(1, maPhongHoc);
-        ResultSet rs = ps.executeQuery();
-
-        while (rs.next()) {
-            Object[] row = new Object[8];
-            row[0] = rs.getString("MaTaiSan");
-            row[1] = rs.getString("TenTaiSan");
-            row[2] = rs.getString("LoaiTaiSan");
-            row[3] = rs.getString("TinhTrang");
-            row[4] = rs.getDate("NgayNhap");
-            row[5] = rs.getString("Ma_Phong_hoc");
-            row[6] = rs.getInt("ID");
-            row[7] = rs.getString("MaLoaiTS");
-
-            list.add(row);
+        // Bước 1: Lấy Ma_Phong_hoc từ MaLop
+        String maPhong = null;
+        String sqlPhong = "SELECT Ma_Phong_hoc FROM LopHoc WHERE MaLop = ?";
+        PreparedStatement psPhong = conn.prepareStatement(sqlPhong);
+        psPhong.setString(1, maLop);
+        ResultSet rsPhong = psPhong.executeQuery();
+        if (rsPhong.next()) {
+            maPhong = rsPhong.getString("Ma_Phong_hoc");
         }
 
-        rs.close();
-        ps.close();
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
-    return list;
-
-    
-}
-public static void main(String[] args) {
-        String maphonghoc = "PHG001";
-        InAnBaoCaoDAO dao = new InAnBaoCaoDAO();
-        List<Object[]> danhSachCSVatChat = dao.loadCoSoVatChatTheoLop(maphonghoc);
-
-        if (danhSachCSVatChat.isEmpty()) {
-            System.out.println("Không có dữ liệu cơ sở vật chất.");
-        } else {
-            System.out.println("Dữ liệu Cơ sở vật chất:");
-            for (Object[] row : danhSachCSVatChat) {
-                System.out.println("==================================");
-                System.out.println("Mã Tài Sản: " + row[0]);
-                System.out.println("Tên Tài Sản: " + row[1]);
-                System.out.println("Loại Tài Sản: " + row[2]);
-                System.out.println("Tình Trạng: " + row[3]);
-                System.out.println("Ngày Nhập: " + row[4]);
-                System.out.println("Mã Phòng Học: " + row[5]);
-                System.out.println("ID: " + row[6]);
-                System.out.println("Mã Loại TS: " + row[7]);
+        // Nếu tìm thấy phòng học
+        if (maPhong != null) {
+            // Bước 2: Lấy danh sách tài sản theo Ma_Phong_hoc
+            String sqlTS = "SELECT MaTaiSan, TenTaiSan, LoaiTaiSan, TinhTrang, NgayNhap " +
+                           "FROM CoSoVatChat WHERE Ma_Phong_hoc = ?";
+            PreparedStatement psTS = conn.prepareStatement(sqlTS);
+            psTS.setString(1, maPhong);
+            ResultSet rsTS = psTS.executeQuery();
+            while (rsTS.next()) {
+                Object[] row = {
+                    rsTS.getString("MaTaiSan"),
+                    rsTS.getString("TenTaiSan"),
+                    rsTS.getString("LoaiTaiSan"),
+                    rsTS.getString("TinhTrang"),
+                    rsTS.getDate("NgayNhap")
+                };
+                list.add(row);
             }
+        } else {
+            System.out.println("Không tìm thấy phòng học cho lớp: " + maLop);
         }
-
+    } catch (SQLException ex) {
+        ex.printStackTrace();
     }
+
+    return list;
+}
+
+
 }

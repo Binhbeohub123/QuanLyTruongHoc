@@ -223,7 +223,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
 
     List<Object[]> dsTS = null;
     if (jCheckBox5.isSelected()) {
-        dsTS = dao.loadCoSoVatChatTheoLop(maLop);
+        dsTS = dao.getCSVCTheoLop(maLop);
     } else if(jCheckBox3.isSelected()) {
         dsTS = dao.loadTatCaCoSoVatChat();
     } 
@@ -348,7 +348,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
 
     // Nếu đã chọn lớp thì in theo lớp, không thì in toàn bộ
     if (maLop != null) {
-        dsTS = dao.loadCoSoVatChatTheoLop(maLop);
+        dsTS = dao.getCSVCTheoLop(maLop);
     } else {
         dsTS = dao.loadTatCaCoSoVatChat();
     }
