@@ -27,6 +27,7 @@ import Dao.VaiTroDAO;
 import Model.VaiTro;
 import java.awt.Image;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.Calendar;
@@ -114,7 +115,8 @@ public class QuanLyNguoiDung_View extends javax.swing.JPanel {
     table.getTableHeader().setResizingAllowed(false);
 }
       private String maHoaMatKhau(String password) {
-    return password;
+    // Chuyển chuỗi thành mảng byte UTF-8 rồi mã hoá Base64
+    return Base64.getEncoder().encodeToString(password.getBytes(StandardCharsets.UTF_8));
 }
 
 // Hàm lấy tên cột từ DefaultTableModel

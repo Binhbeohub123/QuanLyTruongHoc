@@ -264,5 +264,31 @@ public class HocSinhDAO {
         }
         return false;
     }
+    public boolean kiemTraSoDienThoaiPhuHuynh(String sdt, String tenNhap) {
+    String sql = "SELECT TenCha, SDTCha, TenMe, SDTMe FROM PhuHuynh WHERE SDTCha = ? OR SDTMe = ?";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, sdt);
+        ps.setString(2, sdt);
+        ResultSet rs = ps.executeQuery();
 
+        if (rs.next()) {
+            String tenChaDB = rs.getString("TenCha").trim().toLowerCase();
+            String sdtChaDB = rs.getString("SDTCha").trim();
+            String tenMeDB = rs.getString("TenMe").trim().toLowerCase();
+            String sdtMeDB = rs.getString("SDTMe").trim();
+
+            if (sdt.equals(sdtChaDB)) {
+                return tenNhap.trim().toLowerCase().equals(tenChaDB);
+            }
+
+            if (sdt.equals(sdtMeDB)) {
+                return tenNhap.trim().toLowerCase().equals(tenMeDB);
+            }
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false; // Có lỗi xảy ra thì return false để tránh nhập sai
+    }
+    return true; // Nếu SDT chưa tồn tại trong DB thì coi như hợp lệ
+}
 }

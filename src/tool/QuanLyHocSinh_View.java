@@ -466,6 +466,11 @@ if (sdtcha != null && sdtcha.equals(sdtme)) {
     );
     return;
 }
+String ketQua = controller.kiemTraThongTin(tencha, tenme, sdtcha, sdtme);
+if (!ketQua.equals("Thông tin hợp lệ.")) {
+    JOptionPane.showMessageDialog(this, ketQua);
+    return;
+}
 
     // Tạo đối tượng Học Sinh
     HocSinh hs = new HocSinh(maHS, ten, ngaySinh, gioiTinh.equals("Nam"), trangThai, lopHoc, selectedImageBase64,tencha, sdtcha, tenme, sdtme);

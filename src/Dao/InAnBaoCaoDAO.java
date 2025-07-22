@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import javax.swing.JOptionPane;
 
@@ -46,26 +47,20 @@ public class InAnBaoCaoDAO {
 
     return dsKhoi;
 }
-    public Map<String, String> loadLopTheoKhoi(int khoi) {
-    Map<String, String> dsLop = new LinkedHashMap<>();
-
+    public Map<String, String> loadLopTheoKhoiVaNienKhoa(String khoi, String nienKhoa) {
+    Map<String, String> dsLop = new HashMap<>();
     try {
-        String sql = "SELECT MaLop, TenLop FROM LopHoc WHERE Khoi = ?";
+        String sql = "SELECT MaLop, TenLop FROM LopHoc WHERE Khoi = ? AND NienKhoa = ?";
         PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setInt(1, khoi);
+        ps.setString(1, khoi);
+        ps.setString(2, nienKhoa);
         ResultSet rs = ps.executeQuery();
-
-        while(rs.next()) {
+        while (rs.next()) {
             dsLop.put(rs.getString("TenLop"), rs.getString("MaLop"));
         }
-
-        rs.close();
-        ps.close();
     } catch (SQLException e) {
         e.printStackTrace();
-        JOptionPane.showMessageDialog(null, "Lỗi khi load lớp theo khối!");
     }
-
     return dsLop;
 }
     public List<Object[]> loadHocSinhTheoLop(String maLop) {
@@ -219,72 +214,80 @@ public List<Object[]> loadSiSoLop(String maLop) {
 public List<Object[]> loadTatCaCoSoVatChat() {
     List<Object[]> list = new ArrayList<>();
     try {
-        String sql = "SELECT * FROM CoSoVatChat";
+        String sql = "SELECT MaTaiSan, TenTaiSan, LoaiTaiSan, TinhTrang, NgayNhap, Ma_Phong_hoc FROM CoSoVatChat";
         PreparedStatement ps = conn.prepareStatement(sql);
         ResultSet rs = ps.executeQuery();
-
         while (rs.next()) {
-            Object[] row = new Object[8];
-            row[0] = rs.getString("MaTaiSan");
-            row[1] = rs.getString("TenTaiSan");
-            row[2] = rs.getString("LoaiTaiSan");
-            row[3] = rs.getString("TinhTrang");
-            row[4] = rs.getDate("NgayNhap");
-            row[5] = rs.getString("Ma_Phong_hoc");
-            row[6] = rs.getInt("ID");
-            row[7] = rs.getString("MaLoaiTS");
-
+            Object[] row = {
+                rs.getString("MaTaiSan"),
+                rs.getString("TenTaiSan"),
+                rs.getString("LoaiTaiSan"),
+                rs.getString("TinhTrang"),
+                rs.getDate("NgayNhap"),
+                rs.getString("Ma_Phong_hoc")  // Đảm bảo thêm dòng này để khớp
+            };
             list.add(row);
         }
-
-        rs.close();
-        ps.close();
-    } catch (Exception e) {
+    } catch (SQLException e) {
         e.printStackTrace();
     }
     return list;
 }
-public List<Object[]> getCSVCTheoLop(String maLop) {
+public List<Object[]> getCSVCTheoPhong(String maPhong) {
     List<Object[]> list = new ArrayList<>();
-
     try {
-        // Bước 1: Lấy Ma_Phong_hoc từ MaLop
-        String maPhong = null;
-        String sqlPhong = "SELECT Ma_Phong_hoc FROM LopHoc WHERE MaLop = ?";
-        PreparedStatement psPhong = conn.prepareStatement(sqlPhong);
-        psPhong.setString(1, maLop);
-        ResultSet rsPhong = psPhong.executeQuery();
-        if (rsPhong.next()) {
-            maPhong = rsPhong.getString("Ma_Phong_hoc");
+        String sql = "SELECT MaTaiSan, TenTaiSan, LoaiTaiSan, TinhTrang, NgayNhap, Ma_Phong_hoc " +
+                     "FROM CoSoVatChat WHERE Ma_Phong_hoc = ?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, maPhong);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            Object[] row = {
+                rs.getString("MaTaiSan"),
+                rs.getString("TenTaiSan"),
+                rs.getString("LoaiTaiSan"),
+                rs.getString("TinhTrang"),
+                rs.getDate("NgayNhap"),
+                rs.getString("Ma_Phong_hoc")
+            };
+            list.add(row);
         }
-
-        // Nếu tìm thấy phòng học
-        if (maPhong != null) {
-            // Bước 2: Lấy danh sách tài sản theo Ma_Phong_hoc
-            String sqlTS = "SELECT MaTaiSan, TenTaiSan, LoaiTaiSan, TinhTrang, NgayNhap " +
-                           "FROM CoSoVatChat WHERE Ma_Phong_hoc = ?";
-            PreparedStatement psTS = conn.prepareStatement(sqlTS);
-            psTS.setString(1, maPhong);
-            ResultSet rsTS = psTS.executeQuery();
-            while (rsTS.next()) {
-                Object[] row = {
-                    rsTS.getString("MaTaiSan"),
-                    rsTS.getString("TenTaiSan"),
-                    rsTS.getString("LoaiTaiSan"),
-                    rsTS.getString("TinhTrang"),
-                    rsTS.getDate("NgayNhap")
-                };
-                list.add(row);
-            }
-        } else {
-            System.out.println("Không tìm thấy phòng học cho lớp: " + maLop);
-        }
-    } catch (SQLException ex) {
-        ex.printStackTrace();
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
-
     return list;
 }
 
+public String getMaPhongHocTheoLopVaNienKhoa(String maLop, String nienKhoa) {
+    String maPhong = null;
+    try {
+        String sql = "SELECT Ma_Phong_hoc FROM LopHoc WHERE MaLop = ? AND NienKhoa = ?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, maLop);
+        ps.setString(2, nienKhoa);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            maPhong = rs.getString("Ma_Phong_hoc");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return maPhong;
+}
 
+public List<String> loadNienKhoaTheoKhoi(String khoi) {
+    List<String> dsNienKhoa = new ArrayList<>();
+    try {
+        String sql = "SELECT DISTINCT NienKhoa FROM LopHoc WHERE Khoi = ? ORDER BY NienKhoa";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, khoi);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            dsNienKhoa.add(rs.getString("NienKhoa"));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return dsNienKhoa;
+}
 }

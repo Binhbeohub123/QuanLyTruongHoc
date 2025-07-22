@@ -4,32 +4,26 @@
  */
 package tool;
 
-import Dao.InAnBaoCaoDAO;
+import Controller.InAnBaoCaoController;
 import com.formdev.flatlaf.FlatLightLaf;
-import java.awt.Color;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.util.List;
 import java.util.Map;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.JComponent;
-import javax.swing.JPanel;
 import javax.swing.UIManager;
 import Dao.InAnBaoCaoDAO;
+import java.awt.event.ItemEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Vector;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -39,12 +33,14 @@ import javax.swing.table.DefaultTableModel;
 public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     private InAnBaoCaoDAO dao = new InAnBaoCaoDAO();
     private Map<String, String> dsLop = new java.util.LinkedHashMap<>();
-
+    private InAnBaoCaoController controller = new InAnBaoCaoController();
+    
     public QuanLyInAnBaoCao_View() {
         setupTheme();
         initComponents();
         initializeForm();
         loadKhoi();
+        setupSingleSelection(jCheckBox1, jCheckBox2, jCheckBox3, jCheckBox4, jCheckBox5);
         jTextArea2.putClientProperty("JTextArea.placeholderText", "Tất cả mọi thứ xem trước sẽ xuất hiện ở đây ....");
         String[] columnNames = {"Mã HS", "Họ Tên", "Ngày Sinh", "Giới Tính", "Trạng Thái"};
         khoaTable(jTable1);
@@ -109,6 +105,20 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
             return null;
     }
 }
+     private void setupSingleSelection(JCheckBox... boxes) {
+        for (JCheckBox cb : boxes) {
+            cb.addItemListener(e -> {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    // khi cb mới được tick, bỏ tick tất cả các box còn lại
+                    for (JCheckBox other : boxes) {
+                        if (other != cb) {
+                            other.setSelected(false);
+                        }
+                    }
+                }
+            });
+        }
+    }
      private boolean isAnyReportSelected() {
     return jCheckBox1.isSelected() || 
            jCheckBox2.isSelected() || 
@@ -154,7 +164,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     if (jCheckBox1.isSelected()) {
         sb.append("DANH SÁCH SĨ SỐ LỚP ").append(maLop).append("\n");
         sb.append("---------------------------------------------------\n");
-        List<Object[]> dsSiSo = dao.loadSiSoLop(maLop);
+        List<Object[]> dsSiSo = controller.loadSiSoLop(maLop);
         for (Object[] row : dsSiSo) {
             sb.append("Mã HS: ").append(row[0])
               .append(" | Họ Tên: ").append(row[1])
@@ -169,7 +179,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     if (jCheckBox2.isSelected()) {
         sb.append("BẢNG ĐIỂM LỚP ").append(maLop).append(" - ").append(hocKy).append("\n");
         sb.append("---------------------------------------------------\n");
-        List<Object[]> dsBangDiem = dao.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
+        List<Object[]> dsBangDiem = controller.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
         if (dsBangDiem.isEmpty()) {
             sb.append("Không tìm thấy bảng điểm cho danh sách đã chọn.\n");
         } else {
@@ -193,7 +203,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
         sb.append("---------------------------------------------------\n");
         for (String maHS : dsMaHocSinhChon) {
             sb.append("Mã HS: ").append(maHS).append("\n");
-            List<Object[]> dsDiemCaNhan = dao.loadBangDiemCaNhan(maHS, hocKy);
+            List<Object[]> dsDiemCaNhan = controller.loadBangDiemCaNhan(maHS, hocKy);
             if (dsDiemCaNhan.isEmpty()) {
                 sb.append("Không có dữ liệu.\n");
             } else {
@@ -214,21 +224,39 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     // In Cơ sở vật chất
     if (jCheckBox3.isSelected() || jCheckBox5.isSelected()) {
     sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT");
-    if (jCheckBox5.isSelected()) {
-        sb.append(" - Theo Lớp ").append(maLop);
-    } else if(jCheckBox3.isSelected()) {
-        sb.append(" - Toàn Trường");
-    }
-    sb.append("\n---------------------------------------------------\n");
 
     List<Object[]> dsTS = null;
-    if (jCheckBox5.isSelected()) {
-        dsTS = dao.getCSVCTheoLop(maLop);
-    } else if(jCheckBox3.isSelected()) {
-        dsTS = dao.loadTatCaCoSoVatChat();
-    } 
 
-    if (dsTS.isEmpty()) {
+    if (jCheckBox5.isSelected()) {
+        maLop = getSelectedMaLop();
+        if (maLop == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn lớp để in theo lớp!");
+            return;
+        }
+
+                String nienKhoa = (String) jComboBox17.getSelectedItem();
+        if (nienKhoa == null || nienKhoa.equals("Chọn Niên Khóa")) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn niên khóa!");
+            return;
+        }
+
+        String maPhong = controller.getMaPhongHocTheoLopVaNienKhoa(maLop, nienKhoa);
+        if (maPhong == null) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy phòng học cho lớp: " + maLop);
+            return;
+        }
+
+        sb.append(" - Theo Lớp ").append(maLop).append(" (Phòng: ").append(maPhong).append(")");
+        dsTS = controller.getCSVCTheoPhong(maPhong);
+
+    } else if (jCheckBox3.isSelected()) {
+        sb.append(" - Toàn Trường");
+        dsTS = controller.loadTatCaCoSoVatChat();
+    }
+
+    sb.append("\n---------------------------------------------------\n");
+
+    if (dsTS == null || dsTS.isEmpty()) {
         sb.append("Không có dữ liệu tài sản.\n");
     } else {
         for (Object[] row : dsTS) {
@@ -236,10 +264,17 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
               .append(" | Tên TS: ").append(row[1])
               .append(" | Loại: ").append(row[2])
               .append(" | Tình Trạng: ").append(row[3])
-              .append(" | Ngày Nhập: ").append(row[4])
-              .append(" | Phòng: ").append(row[5]).append("\n");
+              .append(" | Ngày Nhập: ").append(row[4]);
+
+            // Với toàn trường (checkBox3), cần kiểm tra có cột Phòng không
+            if (row.length > 5 && row[5] != null) {
+                sb.append(" | Phòng: ").append(row[5]);
+            }
+
+            sb.append("\n");
         }
     }
+
     sb.append("\n");
 }
 
@@ -273,7 +308,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
         sb.append("DANH SÁCH SĨ SỐ LỚP ").append(maLop).append("\n");
         sb.append("---------------------------------------------------\n");
 
-        List<Object[]> dsSiSo = dao.loadSiSoLop(maLop);
+        List<Object[]> dsSiSo = controller.loadSiSoLop(maLop);
         for (Object[] row : dsSiSo) {
             sb.append("Mã HS: ").append(row[0])
               .append(" | Họ Tên: ").append(row[1])
@@ -290,7 +325,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
         sb.append("BẢNG ĐIỂM LỚP ").append(maLop).append(" - ").append(hocKy).append("\n");
         sb.append("---------------------------------------------------\n");
 
-        List<Object[]> dsBangDiem = dao.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
+        List<Object[]> dsBangDiem = controller.loadBangDiemTheoDanhSachHocSinh(dsMaHocSinh, maLop, hocKy);
         if (dsBangDiem.isEmpty()) {
             sb.append("Không tìm thấy bảng điểm cho danh sách đã chọn.\n");
         } else {
@@ -320,7 +355,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
         sb.append("---------------------------------------------------\n");
 
         for (String maHS : dsMaHocSinhChon) {
-            List<Object[]> dsDiemCaNhan = dao.loadBangDiemCaNhan(maHS, hocKy);
+            List<Object[]> dsDiemCaNhan = controller.loadBangDiemCaNhan(maHS, hocKy);
             sb.append("Mã HS: ").append(maHS).append("\n");
 
             if (dsDiemCaNhan.isEmpty()) {
@@ -340,18 +375,30 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
             sb.append("\n");
         }
     }
-    if (jCheckBox3.isSelected()) {
-    sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT").append(maLop != null ? " - Lớp " + maLop : "").append("\n");
+if (jCheckBox5.isSelected()) {
+    maLop = getSelectedMaLop();
+
+    if (maLop == null) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn lớp để in cơ sở vật chất theo lớp!");
+        return;
+    }
+
+        String nienKhoa = (String) jComboBox17.getSelectedItem();
+    if (nienKhoa == null || nienKhoa.equals("Chọn Niên Khóa")) {
+        JOptionPane.showMessageDialog(this, "Vui lòng chọn niên khóa để in cơ sở vật chất theo lớp!");
+        return;
+    }
+
+    String maPhong = controller.getMaPhongHocTheoLopVaNienKhoa(maLop, nienKhoa);
+    if (maPhong == null) {
+        JOptionPane.showMessageDialog(this, "Không tìm thấy phòng học cho lớp: " + maLop);
+        return;
+    }
+
+    sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT CỦA PHÒNG ").append(maPhong).append("\n");
     sb.append("---------------------------------------------------\n");
 
-    List<Object[]> dsTS;
-
-    // Nếu đã chọn lớp thì in theo lớp, không thì in toàn bộ
-    if (maLop != null) {
-        dsTS = dao.getCSVCTheoLop(maLop);
-    } else {
-        dsTS = dao.loadTatCaCoSoVatChat();
-    }
+    List<Object[]> dsTS = controller.getCSVCTheoPhong(maPhong);
 
     if (dsTS.isEmpty()) {
         sb.append("Không có dữ liệu tài sản.\n");
@@ -369,8 +416,26 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
 
     sb.append("\n");
 }
+    if (jCheckBox3.isSelected()) {
+    sb.append("DANH SÁCH CƠ SỞ VẬT CHẤT TOÀN TRƯỜNG\n");
+    sb.append("---------------------------------------------------\n");
 
-    jTextArea2.setText(sb.toString());
+    List<Object[]> dsTS = controller.loadTatCaCoSoVatChat();
+
+    if (dsTS.isEmpty()) {
+        sb.append("Không có dữ liệu tài sản.\n");
+    } else {
+        for (Object[] row : dsTS) {
+            sb.append("Mã TS: ").append(row[0])
+              .append(" | Tên TS: ").append(row[1])
+              .append(" | Loại: ").append(row[2])
+              .append(" | Tình Trạng: ").append(row[3])
+              .append(" | Ngày Nhập: ").append(row[4])
+              .append("\n");
+        }
+    }
+    sb.append("\n");
+}
 }
     
      public void exportToFile(String content) {
@@ -410,7 +475,7 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     List<Integer> dsKhoi = dao.loadKhoi();
     DefaultComboBoxModel<String> modelKhoi = new DefaultComboBoxModel<>();
 
-    modelKhoi.addElement("Chọn Khối"); // Placeholder giữ nguyên
+    modelKhoi.addElement("Chọn Khối");
 
     for (Integer khoi : dsKhoi) {
         modelKhoi.addElement(String.valueOf(khoi));
@@ -422,21 +487,20 @@ public class QuanLyInAnBaoCao_View extends javax.swing.JPanel {
     jComboBox13.addActionListener(e -> {
         String khoiChon = (String) jComboBox13.getSelectedItem();
         if (khoiChon == null || khoiChon.equals("Chọn Khối")) {
-            // Không làm gì nếu chọn placeholder
+            jComboBox17.setModel(new DefaultComboBoxModel<>(new String[]{"Chọn Niên Khóa"}));
             jComboBox14.setModel(new DefaultComboBoxModel<>(new String[]{"Chọn Lớp"}));
             return;
         }
 
-        loadLopTheoKhoi(Integer.parseInt(khoiChon));
-        resetTable();
+        loadNienKhoaTheoKhoi(khoiChon);
     });
-    } // Lưu ánh xạ TenLop -> MaLop
+} // Lưu ánh xạ TenLop -> MaLop
 
-private void loadLopTheoKhoi(int khoi) {
-    dsLop = dao.loadLopTheoKhoi(khoi);
+private void loadLopTheoKhoiVaNienKhoa(String khoi, String nienKhoa) {
+    dsLop = dao.loadLopTheoKhoiVaNienKhoa(khoi, nienKhoa);
+
     DefaultComboBoxModel<String> modelLop = new DefaultComboBoxModel<>();
-
-    modelLop.addElement("Chọn Lớp"); // Placeholder giữ nguyên
+    modelLop.addElement("Chọn Lớp");
 
     for (String tenLop : dsLop.keySet()) {
         modelLop.addElement(tenLop);
@@ -444,6 +508,30 @@ private void loadLopTheoKhoi(int khoi) {
 
     jComboBox14.setModel(modelLop);
 }
+private void loadNienKhoaTheoKhoi(String khoi) {
+    List<String> dsNienKhoa = dao.loadNienKhoaTheoKhoi(khoi);
+
+    DefaultComboBoxModel<String> modelNienKhoa = new DefaultComboBoxModel<>();
+    modelNienKhoa.addElement("Chọn Niên Khóa");
+
+    for (String nk : dsNienKhoa) {
+        modelNienKhoa.addElement(nk);
+    }
+
+    jComboBox17.setModel(modelNienKhoa);
+
+    // Sự kiện chọn niên khóa
+    jComboBox17.addActionListener(e -> {
+        String nienKhoaChon = (String) jComboBox17.getSelectedItem();
+        if (nienKhoaChon == null || nienKhoaChon.equals("Chọn Niên Khóa")) {
+            jComboBox14.setModel(new DefaultComboBoxModel<>(new String[]{"Chọn Lớp"}));
+            return;
+        }
+
+        loadLopTheoKhoiVaNienKhoa(khoi, nienKhoaChon);
+    });
+}
+
 private String getSelectedMaLop() {
     String tenLopChon = (String) jComboBox14.getSelectedItem();
     if (tenLopChon == null || tenLopChon.equals("Chọn Lớp")) {
@@ -453,7 +541,7 @@ private String getSelectedMaLop() {
     return dsLop.get(tenLopChon);
 }
 private void loadHocSinhLenTable(String maLop) {
-    List<Object[]> dsHocSinh = dao.loadHocSinhTheoLop(maLop);
+    List<Object[]> dsHocSinh = controller.loadHocSinhTheoLop(maLop);
 
     String[] columnNames = {"Mã HS", "Họ Tên", "Ngày Sinh", "Giới Tính", "Trạng Thái"};
     DefaultTableModel model = new DefaultTableModel(columnNames, 0);
@@ -508,6 +596,7 @@ public List<String> getDanhSachHocSinhDuocChon() {
         jComboBox13 = new javax.swing.JComboBox<>();
         jComboBox14 = new javax.swing.JComboBox<>();
         jComboBox15 = new javax.swing.JComboBox<>();
+        jComboBox17 = new javax.swing.JComboBox<>();
 
         setBackground(new java.awt.Color(255, 255, 255));
         setPreferredSize(new java.awt.Dimension(1330, 785));
@@ -630,7 +719,7 @@ public List<String> getDanhSachHocSinhDuocChon() {
         jComboBox13.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox13.setForeground(java.awt.Color.darkGray);
         jComboBox13.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Chọn Khối" }));
-        jPanel1.add(jComboBox13, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 30, 250, 50));
+        jPanel1.add(jComboBox13, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 30, 185, 50));
 
         jComboBox14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox14.setForeground(java.awt.Color.darkGray);
@@ -645,12 +734,17 @@ public List<String> getDanhSachHocSinhDuocChon() {
                 jComboBox14ActionPerformed(evt);
             }
         });
-        jPanel1.add(jComboBox14, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 30, 250, 50));
+        jPanel1.add(jComboBox14, new org.netbeans.lib.awtextra.AbsoluteConstraints(840, 30, 185, 50));
 
         jComboBox15.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jComboBox15.setForeground(java.awt.Color.darkGray);
         jComboBox15.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Chọn Học Kỳ", "Học Kỳ I", "Học Kỳ II" }));
-        jPanel1.add(jComboBox15, new org.netbeans.lib.awtextra.AbsoluteConstraints(970, 30, 250, 50));
+        jPanel1.add(jComboBox15, new org.netbeans.lib.awtextra.AbsoluteConstraints(1030, 30, 185, 50));
+
+        jComboBox17.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jComboBox17.setForeground(java.awt.Color.darkGray);
+        jComboBox17.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Chọn Niên Khóa" }));
+        jPanel1.add(jComboBox17, new org.netbeans.lib.awtextra.AbsoluteConstraints(640, 30, 185, 50));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -722,6 +816,7 @@ public List<String> getDanhSachHocSinhDuocChon() {
     private javax.swing.JComboBox<String> jComboBox13;
     private javax.swing.JComboBox<String> jComboBox14;
     private javax.swing.JComboBox<String> jComboBox15;
+    private javax.swing.JComboBox<String> jComboBox17;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;

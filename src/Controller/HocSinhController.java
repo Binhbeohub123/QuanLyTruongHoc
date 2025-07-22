@@ -55,5 +55,37 @@ public class HocSinhController {
     public boolean kiemTraTrungTenHocSinhKhiCapNhat(String ten, String maHS) {
         return dao.checkTrungTenKhiCapNhat(ten, maHS);
     }
+    public String kiemTraThongTin(String tenCha, String tenMe, String sdtCha, String sdtMe) {
+    try {
+        // Check trùng tên cha mẹ
+        if (kiemTraTrungTenChaMe(tenCha, tenMe)) {
+            return "Tên cha và mẹ không được trùng nhau.";
+        }
 
+        // Nếu SDTCha có nhập thì kiểm tra đúng tên cha
+        if (!sdtCha.isEmpty()) {
+            boolean hopLe = dao.kiemTraSoDienThoaiPhuHuynh(sdtCha, tenCha);
+            if (!hopLe) {
+                return "Số điện thoại cha đã tồn tại nhưng không đúng tên cha tương ứng!";
+            }
+        }
+
+        // Nếu SDTMe có nhập thì kiểm tra đúng tên mẹ
+        if (!sdtMe.isEmpty()) {
+            boolean hopLe = dao.kiemTraSoDienThoaiPhuHuynh(sdtMe, tenMe);
+            if (!hopLe) {
+                return "Số điện thoại mẹ đã tồn tại nhưng không đúng tên mẹ tương ứng!";
+            }
+        }
+
+        return "Thông tin hợp lệ.";
+    } catch (Exception e) {
+        e.printStackTrace();
+        return "Lỗi hệ thống: " + e.getMessage();
+    }
+}
+
+public boolean kiemTraTrungTenChaMe(String tenCha, String tenMe) {
+    return tenCha.trim().equalsIgnoreCase(tenMe.trim());
+}
 }
