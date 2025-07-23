@@ -13,6 +13,8 @@ import Util.XDialog;
 import com.formdev.flatlaf.fonts.roboto.FlatRobotoFont;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
 import java.awt.Font;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javax.swing.UIManager;
 
 /**
@@ -248,22 +250,35 @@ public void login() {
     try {
         UsersDAOImpl dao = new UsersDAOImpl();
         User user = dao.findById(username);
-
+        
         if (user == null) {
-            XDialog.alert("Tên đăng nhập không tồn tại!");
-            txtMaso.requestFocus();
-        } else if (!password.equals(user.getMatKhau())) {
-            XDialog.alert("Sai mật khẩu đăng nhập!");
-            txtPassword.requestFocus();
-        } else if (!user.isActive()) {
-            XDialog.alert("Tài khoản của bạn đang bị khoá!");
-        } else {
-            XAuth.user = user; // Lưu thông tin user
-            
-            this.dispose();
-            
-            // ✅ THÊM DÒNG NÀY:
-            openMainForm(user);
+    XDialog.alert("Tên đăng nhập không tồn tại!");
+    txtMaso.requestFocus();
+} else {
+    // 1. Lấy chuỗi Base64 từ DB
+    String storedBase64 = user.getMatKhau();
+    String decodedPassword;
+    try {
+        // 2. Giải mã về mật khẩu gốc
+        byte[] bytes = Base64.getDecoder().decode(storedBase64);
+        decodedPassword = new String(bytes, StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException e) {
+        // Chuỗi DB không phải Base64 hợp lệ
+        XDialog.alert("Lỗi giải mã mật khẩu!");
+        return;
+    }
+
+    // 3. So sánh mật khẩu gốc với input
+    if (!password.equals(decodedPassword)) {
+        XDialog.alert("Sai mật khẩu đăng nhập!");
+        txtPassword.requestFocus();
+    } else if (!user.isActive()) {
+        XDialog.alert("Tài khoản của bạn đang bị khoá!");
+    } else {
+        XAuth.user = user;     // Lưu thông tin user
+        this.dispose();
+        openMainForm(user);    // Mở form chính
+    }
         }
     } catch (Exception e) {
         XDialog.alert("Lỗi đăng nhập: " + e.getMessage());
